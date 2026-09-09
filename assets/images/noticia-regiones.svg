@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 375" width="100%" height="100%">
+  <defs>
+    <linearGradient id="regGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#063223"/>
+      <stop offset="60%" stop-color="#0b4d36"/>
+      <stop offset="100%" stop-color="#021a11"/>
+    </linearGradient>
+    <linearGradient id="regGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="375" fill="url(#regGrad)"/>
+  <!-- Silueta de montañas con toques dorados y esmeralda -->
+  <polygon points="20,375 160,180 280,375" fill="#ffffff" opacity="0.06"/>
+  <polygon points="180,375 350,130 520,375" fill="#ffffff" opacity="0.1"/>
+  <polygon points="380,375 480,210 580,375" fill="#ffffff" opacity="0.06"/>
+  <circle cx="480" cy="110" r="35" fill="url(#regGold)" opacity="0.15"/>
+  
+  <rect x="40" y="40" width="100" height="26" rx="4" fill="#10b981"/>
+  <text x="90" y="58" fill="#ffffff" font-family="sans-serif" font-size="11" font-weight="bold" text-anchor="middle" letter-spacing="1">REGIONES</text>
+  <text x="40" y="335" fill="#ffffff" font-family="sans-serif" font-size="20" font-weight="bold">Panorama Nacional</text>
+</svg>

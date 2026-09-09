@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Página no encontrada (404) | Linea Abierta</title>
+  <meta name="description" content="La página que buscas no existe o ha sido movida en Linea Abierta (lineaabierta.net.pe).">
+  <meta name="robots" content="noindex, follow">
+
+  <!-- Favicon / Isotipo -->
+  <link rel="icon" type="image/svg+xml" href="assets/images/emblem-linea-abierta.svg">
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .error-hero {
+      padding: 4rem 1rem;
+      text-align: center;
+      min-height: 50vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .error-code {
+      font-size: 5.5rem;
+      font-weight: 900;
+      color: var(--color-emerald);
+      line-height: 1;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.04em;
+    }
+    .error-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 0.75rem;
+    }
+    .error-desc {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      max-width: 520px;
+      margin-bottom: 1.75rem;
+      line-height: 1.5;
+    }
+    .error-actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .btn-home {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background-color: var(--color-primary);
+      color: #ffffff;
+      padding: 0.65rem 1.25rem;
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+      font-size: 0.9rem;
+      transition: background-color var(--transition-fast);
+    }
+    .btn-home:hover {
+      background-color: var(--color-emerald);
+      color: #ffffff;
+    }
+    .btn-search {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.65rem 1.25rem;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all var(--transition-fast);
+    }
+    .btn-search:hover {
+      border-color: var(--color-accent);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Topbar -->
+  <aside class="topbar" aria-label="Barra superior">
+    <div class="container">
+      <div class="topbar-left">
+        <span class="topbar-item" id="live-peru-time">Cargando hora oficial de Lima...</span>
+        <span class="topbar-divider"></span>
+        <span class="topbar-item">
+          <strong>Dólar SBS:</strong> C: S/ 3.732 | V: S/ 3.745
+        </span>
+      </div>
+      <div class="topbar-right">
+        <button class="theme-toggle-btn" aria-label="Cambiar tema">
+          🌙 <span class="theme-label">Modo Noche</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container">
+      <div class="header-inner">
+        <div class="brand-wrapper">
+          <a href="index.html" class="brand-logo" aria-label="Linea Abierta Inicio">
+            <img src="assets/images/emblem-linea-abierta.svg" alt="Isotipo Linea Abierta" class="brand-emblem-icon" width="46" height="46">
+            <div class="brand-typography">
+              <div class="brand-title-main">
+                LINEA ABIERTA<span class="gold-dot">.</span>
+              </div>
+              <div class="brand-tagline-text">El portal informativo del Perú</div>
+            </div>
+          </a>
+        </div>
+        <div class="header-actions">
+          <button class="search-trigger-btn" aria-label="Buscar noticias">
+            🔍 <span>Buscar en Linea Abierta...</span>
+          </button>
+          <button class="mobile-nav-toggle" id="mobile-menu-btn" aria-label="Abrir menú">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navbar -->
+  <nav class="main-nav-bar" aria-label="Categorías">
+    <div class="container">
+      <ul class="main-nav-list">
+        <li class="main-nav-item"><a href="index.html">Portada</a></li>
+        <li class="main-nav-item"><a href="categoria.html?cat=politica">Política</a></li>
+        <li class="main-nav-item"><a href="categoria.html?cat=actualidad">Actualidad</a></li>
+        <li class="main-nav-item"><a href="categoria.html?cat=regiones">Regiones</a></li>
+        <li class="main-nav-item"><a href="categoria.html?cat=economia">Economía</a></li>
+        <li class="main-nav-item"><a href="categoria.html?cat=deportes">Deportes</a></li>
+        <li class="main-nav-item"><a href="categoria.html?cat=opinion">Opinión</a></li>
+        <li class="main-nav-item"><a href="categoria.html?cat=tendencias">Tendencias</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Contenido 404 -->
+  <main class="container">
+    <div class="error-hero">
+      <div class="error-code">404</div>
+      <h1 class="error-title">Página no encontrada</h1>
+      <p class="error-desc">
+        La noticia, sección o archivo que intentas consultar no existe o ha cambiado de dirección. Te invitamos a volver a la portada o usar el buscador.
+      </p>
+      <div class="error-actions">
+        <a href="index.html" class="btn-home">← Regresar a la Portada</a>
+        <button class="btn-search search-trigger-btn">🔍 Buscar Noticias</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <div>
+          © 2026 <strong>Linea Abierta</strong> (lineaabierta.net.pe). Todos los derechos reservados.
+        </div>
+        <div class="footer-legal-links">
+          <a href="index.html">Portada</a>
+          <a href="articulo.html">Términos</a>
+          <a href="articulo.html">Privacidad</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal y Drawer -->
+  <div class="search-modal-overlay" id="search-modal" role="dialog" aria-modal="true">
+    <div class="search-modal-container">
+      <div class="search-modal-header">
+        <h4 style="font-weight:700; color:var(--text-primary);">Buscar en Linea Abierta</h4>
+        <button class="search-modal-close" id="search-modal-close">✕</button>
+      </div>
+      <form class="search-input-wrap" onsubmit="event.preventDefault(); window.location.href='categoria.html?q=' + encodeURIComponent(document.getElementById('search-input').value);">
+        <span class="search-icon-inside">🔍</span>
+        <input type="search" id="search-input" placeholder="Buscar noticias...">
+      </form>
+    </div>
+  </div>
+
+  <div class="mobile-drawer-overlay" id="drawer-overlay"></div>
+  <div class="mobile-drawer" id="mobile-drawer">
+    <div class="drawer-header">
+      <div class="brand-logo" style="color:#ffffff;">
+        <img src="assets/images/emblem-linea-abierta.svg" alt="Isotipo Linea Abierta" class="brand-emblem-icon" width="38" height="38">
+        <div class="brand-typography">
+          <div class="brand-title-main" style="color:#ffffff; font-size:1.35rem;">
+            LINEA ABIERTA<span class="gold-dot">.</span>
+          </div>
+        </div>
+      </div>
+      <button id="drawer-close-btn" style="color:#fff; font-size:1.4rem;">✕</button>
+    </div>
+    <ul class="drawer-nav-list">
+      <li class="drawer-nav-item"><a href="index.html">Portada</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=politica">Política</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=actualidad">Actualidad</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=regiones">Regiones</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=economia">Economía</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=deportes">Deportes</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=opinion">Opinión</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=tendencias">Tendencias</a></li>
+    </ul>
+  </div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sección de Noticias | Linea Abierta</title>
+  <meta name="description" content="Información especializada, análisis y cobertura continua por categorías en Linea Abierta (lineaabierta.net.pe).">
+  <meta name="robots" content="index, follow">
+
+  <!-- Favicon / Isotipo -->
+  <link rel="icon" type="image/svg+xml" href="assets/images/emblem-linea-abierta.svg">
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .category-header-banner {
+      background: linear-gradient(135deg, var(--color-primary) 0%, #073827 100%);
+      color: #ffffff;
+      padding: 2rem 0;
+      margin-bottom: 1.75rem;
+      border-bottom: 3px solid var(--color-accent);
+    }
+    .category-header-banner h1 {
+      color: #ffffff;
+      font-size: 1.85rem;
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+    .category-header-banner p {
+      color: #cbe3d7;
+      font-size: 0.95rem;
+      max-width: 750px;
+    }
+    .category-filters-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+      gap: 0.85rem;
+    }
+    .filter-tags {
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      padding: 0.3rem 0.8rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      font-weight: 600;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      transition: all var(--transition-fast);
+    }
+    .filter-btn.active, .filter-btn:hover {
+      background-color: var(--color-primary);
+      color: var(--color-accent);
+      border-color: var(--color-primary);
+    }
+    .pagination-bar {
+      display: flex;
+      justify-content: center;
+      gap: 0.45rem;
+      margin: 2.5rem 0;
+    }
+    .page-btn {
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: var(--text-primary);
+      transition: all var(--transition-fast);
+    }
+    .page-btn.active, .page-btn:hover {
+      background-color: var(--color-accent);
+      color: #041f16;
+      border-color: var(--color-accent);
+    }
+    .page-btn.page-nav {
+      width: auto;
+      padding: 0 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Topbar -->
+  <aside class="topbar" aria-label="Barra superior">
+    <div class="container">
+      <div class="topbar-left">
+        <span class="topbar-item" id="live-peru-time">Cargando hora oficial de Lima...</span>
+        <span class="topbar-divider"></span>
+        <span class="topbar-item">
+          <strong>Dólar SBS:</strong> C: S/ 3.732 | V: S/ 3.745 <span class="indicator-pill">▼ 0.12%</span>
+        </span>
+      </div>
+      <div class="topbar-right">
+        <a href="index.html#lo-ultimo" class="topbar-breaking-pill">
+          ⚡ Última hora
+        </a>
+        <div class="topbar-socials">
+          <a href="https://lineaabierta.net.pe" aria-label="X">𝕏</a>
+          <a href="https://lineaabierta.net.pe" aria-label="Facebook">f</a>
+          <a href="https://lineaabierta.net.pe" aria-label="YouTube">yt</a>
+        </div>
+        <button class="theme-toggle-btn" aria-label="Cambiar tema">
+          🌙 <span class="theme-label">Modo Noche</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container">
+      <div class="header-inner">
+        <div class="brand-wrapper">
+          <a href="index.html" class="brand-logo" aria-label="Linea Abierta Inicio">
+            <img src="assets/images/emblem-linea-abierta.svg" alt="Isotipo Linea Abierta" class="brand-emblem-icon" width="46" height="46">
+            <div class="brand-typography">
+              <div class="brand-title-main">
+                LINEA ABIERTA<span class="gold-dot">.</span>
+              </div>
+              <div class="brand-tagline-text">El portal informativo del Perú</div>
+            </div>
+          </a>
+        </div>
+        <div class="header-actions">
+          <button class="search-trigger-btn" aria-label="Buscar noticias">
+            🔍 <span>Buscar en Linea Abierta...</span>
+          </button>
+          <button class="mobile-nav-toggle" id="mobile-menu-btn" aria-label="Abrir menú">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navbar -->
+  <nav class="main-nav-bar" aria-label="Categorías">
+    <div class="container">
+      <ul class="main-nav-list" id="category-nav-list">
+        <li class="main-nav-item"><a href="index.html">Portada</a></li>
+        <li class="main-nav-item" data-cat="politica"><a href="categoria.html?cat=politica">Política</a></li>
+        <li class="main-nav-item" data-cat="actualidad"><a href="categoria.html?cat=actualidad">Actualidad</a></li>
+        <li class="main-nav-item" data-cat="regiones"><a href="categoria.html?cat=regiones">Regiones</a></li>
+        <li class="main-nav-item" data-cat="economia"><a href="categoria.html?cat=economia">Economía</a></li>
+        <li class="main-nav-item" data-cat="deportes"><a href="categoria.html?cat=deportes">Deportes</a></li>
+        <li class="main-nav-item" data-cat="opinion"><a href="categoria.html?cat=opinion">Opinión</a></li>
+        <li class="main-nav-item" data-cat="tendencias"><a href="categoria.html?cat=tendencias">Tendencias</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Banner de Categoría -->
+  <header class="category-header-banner">
+    <div class="container">
+      <div class="breadcrumbs" style="color:#cbe3d7; margin-bottom:0.6rem;">
+        <a href="index.html" style="color:#cbe3d7;">Inicio</a>
+        <span class="separator">/</span>
+        <span class="current" id="breadcrumb-category" style="color:#ffffff;">Sección</span>
+      </div>
+      <h1 id="category-title">
+        <span>Noticias de Política</span>
+      </h1>
+      <p id="category-description">
+        Cobertura y análisis exhaustivo de los poderes del Estado, decisiones legislativas, gobernabilidad y acontecer institucional en el Perú.
+      </p>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="container">
+    
+    <!-- Filtros de la Sección -->
+    <div class="category-filters-bar">
+      <div class="filter-tags">
+        <button class="filter-btn active">Todos los temas</button>
+        <button class="filter-btn">Congreso</button>
+        <button class="filter-btn">Poder Ejecutivo</button>
+        <button class="filter-btn">Poder Judicial</button>
+        <button class="filter-btn">Elecciones</button>
+      </div>
+      <div style="font-size:0.82rem; color:var(--text-muted);">
+        Orden: <strong>Más recientes</strong>
+      </div>
+    </div>
+
+    <div class="main-content-layout">
+      
+      <!-- Grilla de Artículos -->
+      <section class="category-articles-section">
+        
+        <!-- Noticia Destacada de Categoría -->
+        <article class="lead-card" style="margin-bottom:1.5rem;">
+          <a href="articulo.html" class="lead-image-wrap">
+            <img src="assets/images/noticia-principal.svg" alt="Congreso debate reformas" width="800" height="450">
+            <span class="badge badge-politica">DESTACADO</span>
+          </a>
+          <div class="lead-content">
+            <h2 class="lead-title">
+              <a href="articulo.html">Congreso debate reformas clave para el equilibrio de poderes y el calendario electoral institucional</a>
+            </h2>
+            <p class="lead-summary">
+              El pleno del Parlamento abrió debate extraordinario para definir el marco normativo de las próximas reformas políticas del país.
+            </p>
+            <div class="card-meta">
+              <span class="author">Por Martín Quispe</span>
+              <span>•</span>
+              <time datetime="2026-09-09T10:30">Hace 35 minutos</time>
+            </div>
+          </div>
+        </article>
+
+        <!-- Grilla de Noticias -->
+        <div class="news-feed-grid">
+          
+          <article class="feed-card">
+            <a href="articulo.html" class="feed-card-img">
+              <img src="assets/images/noticia-principal.svg" alt="Reunión de bancadas">
+            </a>
+            <div class="feed-card-body">
+              <span class="badge badge-politica">POLÍTICA</span>
+              <h3 class="feed-card-title">
+                <a href="articulo.html">Junta de Portavoces consensúa priorizar agenda de seguridad ciudadana y justicia</a>
+              </h3>
+              <p class="feed-card-snippet">
+                Se acordó agendar con urgencia iniciativas que endurecen sanciones contra el crimen organizado y extorsión.
+              </p>
+              <div class="card-meta"><time>Hace 2 horas</time></div>
+            </div>
+          </article>
+
+          <article class="feed-card">
+            <a href="articulo.html" class="feed-card-img">
+              <img src="assets/images/noticia-economia.svg" alt="Presupuesto">
+            </a>
+            <div class="feed-card-body">
+              <span class="badge badge-economia">PRESUPUESTO</span>
+              <h3 class="feed-card-title">
+                <a href="articulo.html">Comisión de Presupuesto recibe a titulares de sectores clave para sustentación de metas</a>
+              </h3>
+              <p class="feed-card-snippet">
+                Ministros expusieron las prioridades de inversión en salud, infraestructura educativa y saneamiento.
+              </p>
+              <div class="card-meta"><time>Hace 4 horas</time></div>
+            </div>
+          </article>
+
+          <article class="feed-card">
+            <a href="articulo.html" class="feed-card-img">
+              <img src="assets/images/noticia-regiones.svg" alt="Descentralización">
+            </a>
+            <div class="feed-card-body">
+              <span class="badge badge-regiones">REGIONES</span>
+              <h3 class="feed-card-title">
+                <a href="articulo.html">Gobernadores regionales demandan mayor celeridad en la transferencia de recursos para obras</a>
+              </h3>
+              <p class="feed-card-snippet">
+                En cumbre de descentralización, autoridades solicitaron destrabar expedientes técnicos en ministerios.
+              </p>
+              <div class="card-meta"><time>Hace 6 horas</time></div>
+            </div>
+          </article>
+
+          <article class="feed-card">
+            <a href="articulo.html" class="feed-card-img">
+              <img src="assets/images/noticia-principal.svg" alt="Tribunal Constitucional">
+            </a>
+            <div class="feed-card-body">
+              <span class="badge badge-politica">JUSTICIA</span>
+              <h3 class="feed-card-title">
+                <a href="articulo.html">Tribunal Constitucional sesiona en audiencia pública descentralizada para resolver causas prioritarias</a>
+              </h3>
+              <p class="feed-card-snippet">
+                El colegiado evaluó demandas de amparo y procesos de cumplimiento procedentes de diversas cortes superiores.
+              </p>
+              <div class="card-meta"><time>Ayer</time></div>
+            </div>
+          </article>
+
+        </div>
+
+        <!-- Paginación -->
+        <nav class="pagination-bar" aria-label="Paginación de sección">
+          <button class="page-btn active" aria-current="page">1</button>
+          <button class="page-btn">2</button>
+          <button class="page-btn">3</button>
+          <button class="page-btn page-nav">Siguiente →</button>
+        </nav>
+
+      </section>
+
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="widget-box">
+          <h3 class="widget-title">
+            <span>🔥 Lo más leído de la sección</span>
+          </h3>
+          <ol class="ranked-list">
+            <li class="ranked-item">
+              <span class="ranked-number">1</span>
+              <a href="articulo.html" class="ranked-title">Análisis de la agenda legislativa para el nuevo periodo anual de sesiones</a>
+            </li>
+            <li class="ranked-item">
+              <span class="ranked-number">2</span>
+              <a href="articulo.html" class="ranked-title">Opinión jurídica sobre la interpretación de fueros constitucionales</a>
+            </li>
+            <li class="ranked-item">
+              <span class="ranked-number">3</span>
+              <a href="articulo.html" class="ranked-title">Los proyectos de ley con mayor respaldo entre las bancadas parlamentarias</a>
+            </li>
+          </ol>
+        </div>
+
+        <div class="newsletter-box">
+          <h4>Alertas Informativas</h4>
+          <p>Entérate al instante de los acontecimientos políticos más relevantes del Perú.</p>
+          <form class="newsletter-form" onsubmit="event.preventDefault(); alert('Suscrito a las alertas de Linea Abierta.');">
+            <input type="email" class="newsletter-input" placeholder="Tu correo..." required>
+            <button type="submit" class="newsletter-btn">Suscribirse</button>
+          </form>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <div>
+          © 2026 <strong>Linea Abierta</strong> (lineaabierta.net.pe). Todos los derechos reservados.
+        </div>
+        <div class="footer-legal-links">
+          <a href="index.html">Portada</a>
+          <a href="articulo.html">Términos</a>
+          <a href="articulo.html">Privacidad</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal y Drawer -->
+  <div class="search-modal-overlay" id="search-modal" role="dialog" aria-modal="true">
+    <div class="search-modal-container">
+      <div class="search-modal-header">
+        <h4 style="font-weight:700; color:var(--text-primary);">Buscar en Linea Abierta</h4>
+        <button class="search-modal-close" id="search-modal-close">✕</button>
+      </div>
+      <form class="search-input-wrap" onsubmit="event.preventDefault(); window.location.href='categoria.html?q=' + encodeURIComponent(document.getElementById('search-input').value);">
+        <span class="search-icon-inside">🔍</span>
+        <input type="search" id="search-input" placeholder="Buscar...">
+      </form>
+    </div>
+  </div>
+
+  <div class="mobile-drawer-overlay" id="drawer-overlay"></div>
+  <div class="mobile-drawer" id="mobile-drawer">
+    <div class="drawer-header">
+      <div class="brand-logo" style="color:#ffffff;">
+        <img src="assets/images/emblem-linea-abierta.svg" alt="Isotipo Linea Abierta" class="brand-emblem-icon" width="38" height="38">
+        <div class="brand-typography">
+          <div class="brand-title-main" style="color:#ffffff; font-size:1.35rem;">
+            LINEA ABIERTA<span class="gold-dot">.</span>
+          </div>
+        </div>
+      </div>
+      <button id="drawer-close-btn" style="color:#fff; font-size:1.4rem;">✕</button>
+    </div>
+    <ul class="drawer-nav-list">
+      <li class="drawer-nav-item"><a href="index.html">Portada</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=politica">Política</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=actualidad">Actualidad</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=regiones">Regiones</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=economia">Economía</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=deportes">Deportes</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=opinion">Opinión</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=tendencias">Tendencias</a></li>
+    </ul>
+  </div>
+
+  <script src="js/main.js"></script>
+  <script>
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const cat = params.get('cat');
+      const query = params.get('q');
+
+      const catMap = {
+        'politica': { title: 'Política & Congreso', desc: 'Cobertura del Parlamento, Ejecutivo, balance de poderes y reformas constitucionales.' },
+        'actualidad': { title: 'Actualidad Nacional', desc: 'Acontecimientos del día a día, seguridad ciudadana, transporte y sociedad peruana.' },
+        'regiones': { title: 'Regiones del Perú', desc: 'Noticias desde el norte, centro, sur y la Amazonía peruana en descentralización continua.' },
+        'economia': { title: 'Economía & Negocios', desc: 'Indicadores, exportaciones, BCR, finanzas personales, empleo e inversiones.' },
+        'deportes': { title: 'Deportes', desc: 'Fútbol nacional (Liga 1), Selección Peruana, polideportivo y atletas peruanos en el mundo.' },
+        'opinion': { title: 'Columnas de Opinión', desc: 'Espacio de análisis, debate plural y tribuna de firmas destacadas sobre la realidad peruana.' },
+        'tendencias': { title: 'Tendencias & Sociedad', desc: 'Innovación, cultura, medio ambiente y temas virales de interés ciudadano.' }
+      };
+
+      if (cat && catMap[cat]) {
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = catMap[cat].title;
+        const titleEl = document.getElementById('category-title');
+        titleEl.innerHTML = '';
+        titleEl.appendChild(titleSpan);
+        document.getElementById('category-description').textContent = catMap[cat].desc;
+        document.getElementById('breadcrumb-category').textContent = catMap[cat].title;
+        document.title = `${catMap[cat].title} | Linea Abierta`;
+
+        const activeNavItem = document.querySelector(`.main-nav-item[data-cat="${cat}"]`);
+        if (activeNavItem) {
+          document.querySelectorAll('.main-nav-item').forEach(el => el.classList.remove('active'));
+          activeNavItem.classList.add('active');
+        }
+      } else if (query) {
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = `Resultados para: "${query}"`;
+        const titleEl = document.getElementById('category-title');
+        titleEl.innerHTML = '';
+        titleEl.appendChild(titleSpan);
+        document.getElementById('category-description').textContent = 'Mostrando noticias y artículos coincidentes en Linea Abierta.';
+        document.getElementById('breadcrumb-category').textContent = 'Búsqueda';
+        document.title = `Búsqueda: ${query} | Linea Abierta`;
+      }
+    })();
+  </script>
+</body>
+</html>

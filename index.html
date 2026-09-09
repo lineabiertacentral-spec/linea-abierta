@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linea Abierta | El portal informativo del Perú</title>
+  <meta name="description" content="Linea Abierta (lineaabierta.net.pe): Información veraz, plural y en tiempo real sobre la actualidad política, económica, regional y deportiva del Perú.">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph / Redes Sociales -->
+  <meta property="og:site_name" content="Linea Abierta">
+  <meta property="og:title" content="Linea Abierta | El portal informativo del Perú">
+  <meta property="og:description" content="Periodismo independiente, plural y en tiempo real. Cobertura de política, economía, regiones y sociedad peruana.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://lineaabierta.net.pe/">
+  <meta property="og:image" content="assets/images/noticia-principal.svg">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Linea Abierta | Noticias del Perú">
+  <meta name="twitter:description" content="Información veraz y al instante desde Lima y todas las regiones del país.">
+
+  <!-- Favicon / Isotipo -->
+  <link rel="icon" type="image/svg+xml" href="assets/images/emblem-linea-abierta.svg">
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  
+  <!-- Schema.org Datos Estructurados -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "NewsMediaOrganization",
+    "name": "Linea Abierta",
+    "url": "https://lineaabierta.net.pe",
+    "logo": "https://lineaabierta.net.pe/assets/images/logo-linea-abierta.svg",
+    "description": "Portal de noticias peruano con información política, económica, regional y deportiva en tiempo real.",
+    "foundingLocation": "Lima, Perú",
+    "knowsAbout": ["Política peruana", "Economía", "Regiones del Perú", "Actualidad"]
+  }
+  </script>
+</head>
+<body>
+
+  <!-- 1. BARRA SUPERIOR LIMPIA Y COMPACTA -->
+  <aside class="topbar" aria-label="Barra superior de información">
+    <div class="container">
+      <div class="topbar-left">
+        <span class="topbar-item" id="live-peru-time">Cargando hora oficial de Lima...</span>
+        <span class="topbar-divider"></span>
+        <span class="topbar-item">
+          <strong>Dólar SBS:</strong> C: S/ 3.732 | V: S/ 3.745 <span class="indicator-pill">▼ 0.12%</span>
+        </span>
+      </div>
+      <div class="topbar-right">
+        <a href="#lo-ultimo" class="topbar-breaking-pill">
+          ⚡ Última hora
+        </a>
+        <div class="topbar-socials">
+          <a href="https://lineaabierta.net.pe" aria-label="X" title="Síguenos en X">𝕏</a>
+          <a href="https://lineaabierta.net.pe" aria-label="Facebook" title="Síguenos en Facebook">f</a>
+          <a href="https://lineaabierta.net.pe" aria-label="YouTube" title="Canal de YouTube">yt</a>
+          <a href="https://lineaabierta.net.pe" aria-label="TikTok" title="Canal de TikTok">tk</a>
+        </div>
+        <button class="theme-toggle-btn" aria-label="Cambiar tema de color">
+          🌙 <span class="theme-label">Modo Noche</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 2. CABECERA PRINCIPAL CON IDENTIDAD PROPIA -->
+  <header class="site-header">
+    <div class="container">
+      <div class="header-inner">
+        <!-- Logotipo Oficial Linea Abierta -->
+        <div class="brand-wrapper">
+          <a href="index.html" class="brand-logo" aria-label="Linea Abierta Inicio">
+            <img src="assets/images/emblem-linea-abierta.svg" alt="Isotipo Linea Abierta" class="brand-emblem-icon" width="46" height="46">
+            <div class="brand-typography">
+              <div class="brand-title-main">
+                LINEA ABIERTA<span class="gold-dot">.</span>
+              </div>
+              <div class="brand-tagline-text">El portal informativo del Perú</div>
+            </div>
+          </a>
+        </div>
+
+        <!-- Acciones Cabecera -->
+        <div class="header-actions">
+          <button class="search-trigger-btn" aria-label="Buscar noticias">
+            🔍 <span>Buscar en Linea Abierta...</span>
+          </button>
+          <button class="mobile-nav-toggle" id="mobile-menu-btn" aria-label="Abrir menú de navegación">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 3. BARRA DE NAVEGACIÓN PRINCIPAL -->
+  <nav class="main-nav-bar" aria-label="Navegación principal de categorías">
+    <div class="container">
+      <ul class="main-nav-list">
+        <li class="main-nav-item active"><a href="index.html">Portada</a></li>
+        <li class="main-nav-item"><a href="categoria.html?cat=politica">Política</a></li>
+        <li class="main-nav-item"><a href="categoria.html?cat=actualidad">Actualidad</a></li>
+        <li class="main-nav-item"><a href="categoria.html?cat=regiones">Regiones</a></li>
+        <li class="main-nav-item"><a href="categoria.html?cat=economia">Economía</a></li>
+        <li class="main-nav-item"><a href="categoria.html?cat=deportes">Deportes</a></li>
+        <li class="main-nav-item"><a href="categoria.html?cat=opinion">Opinión</a></li>
+        <li class="main-nav-item"><a href="categoria.html?cat=tendencias">Tendencias</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- 4. CINTILLO ÚLTIMO MINUTO (TICKER) -->
+  <section class="breaking-ticker" aria-label="Noticias de último minuto">
+    <div class="container">
+      <div class="ticker-inner">
+        <div class="ticker-badge">
+          <span class="pulse-dot"></span> ÚLTIMO MINUTO
+        </div>
+        <div class="ticker-content">
+          <div class="ticker-item">
+            <span class="ticker-time">[12:45]</span>
+            <a href="articulo.html">Congreso aprueba en primera votación dictamen de reforma constitucional sobre representación parlamentaria.</a>
+            &nbsp;•&nbsp;
+            <span class="ticker-time">[11:20]</span>
+            <a href="articulo.html">BCR confirma estabilidad en proyección de crecimiento e inflación para el cierre del año.</a>
+            &nbsp;•&nbsp;
+            <span class="ticker-time">[09:50]</span>
+            <a href="articulo.html">MTC inicia supervisión técnica de infraestructura vial en la carretera central y vías alternas.</a>
+            &nbsp;•&nbsp;
+            <span class="ticker-time">[08:15]</span>
+            <a href="articulo.html">Selección Nacional define fixture oficial para la próxima fecha de eliminatorias sudamericanas.</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. PORTADA PRINCIPAL / HERO GRID -->
+  <main class="container">
+    <section class="hero-section" aria-label="Noticias destacadas del día">
+      <div class="hero-grid">
+        
+        <!-- Noticia Principal (Lead Card) con titular calibrado y sin espacios vacíos -->
+        <article class="lead-card">
+          <a href="articulo.html" class="lead-image-wrap" aria-label="Ver noticia completa">
+            <img src="assets/images/noticia-principal.svg" alt="Congreso de la República del Perú" loading="eager" width="800" height="450">
+            <span class="badge badge-accent">POLÍTICA</span>
+          </a>
+          <div class="lead-content">
+            <h1 class="lead-title">
+              <a href="articulo.html">Congreso debate reformas clave para el equilibrio de poderes y el calendario electoral institucional</a>
+            </h1>
+            <p class="lead-summary">
+              El pleno del Parlamento abrió debate extraordinario con la participación de bancadas y expertos constitucionales para definir el marco normativo de las próximas reformas políticas del país.
+            </p>
+            <div class="card-meta">
+              <span class="author">Por Unidad de Investigación</span>
+              <span>•</span>
+              <time datetime="2026-09-09T11:00">Hace 35 minutos</time>
+              <span>•</span>
+              <span>4 min de lectura</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Columna Secundaria de Hero -->
+        <div class="hero-subcolumn">
+          
+          <article class="sub-card">
+            <a href="articulo.html" class="sub-card-image">
+              <img src="assets/images/noticia-economia.svg" alt="Economía y Exportaciones" loading="lazy" width="600" height="375">
+            </a>
+            <div class="sub-card-body">
+              <span class="badge badge-economia">ECONOMÍA</span>
+              <h2 class="sub-card-title">
+                <a href="articulo.html">Exportaciones no tradicionales crecen 8.4% impulsadas por agroindustria norteña y minería</a>
+              </h2>
+              <div class="card-meta">
+                <time datetime="2026-09-09T10:15">Hace 1 hora</time>
+              </div>
+            </div>
+          </article>
+
+          <article class="sub-card">
+            <a href="articulo.html" class="sub-card-image">
+              <img src="assets/images/noticia-regiones.svg" alt="Regiones del Perú" loading="lazy" width="600" height="375">
+            </a>
+            <div class="sub-card-body">
+              <span class="badge badge-regiones">REGIONES</span>
+              <h2 class="sub-card-title">
+                <a href="articulo.html">Cusco y Arequipa coordinan agenda interregional para la modernización turística</a>
+              </h2>
+              <div class="card-meta">
+                <time datetime="2026-09-09T09:30">Hace 2 horas</time>
+              </div>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. CONTENIDO CENTRAL Y BARRA LATERAL -->
+    <div class="main-content-layout" id="lo-ultimo">
+      
+      <!-- Columna Principal: Secciones de Noticias -->
+      <section class="feed-section" aria-label="Lo último en el Perú">
+        <h2 class="section-title">
+          <span>Lo Último en el Perú</span>
+          <a href="categoria.html?cat=actualidad" class="view-more">Ver todas las noticias →</a>
+        </h2>
+
+        <div class="news-feed-grid">
+          
+          <!-- Noticia 1 -->
+          <article class="feed-card">
+            <a href="articulo.html" class="feed-card-img">
+              <img src="assets/images/noticia-principal.svg" alt="Operativo Contraloría" loading="lazy">
+            </a>
+            <div class="feed-card-body">
+              <span class="badge badge-actualidad">ACTUALIDAD</span>
+              <h3 class="feed-card-title">
+                <a href="articulo.html">Contraloría despliega operativo de control concurrente en principales obras viales del país</a>
+              </h3>
+              <p class="feed-card-snippet">
+                Auditores fiscalizarán más de 120 proyectos estratégicos de conectividad nacional para garantizar transparencia presupuestal.
+              </p>
+              <div class="card-meta">
+                <time datetime="2026-09-09T08:45">Hace 3 horas</time>
+              </div>
+            </div>
+          </article>
+
+          <!-- Noticia 2 -->
+          <article class="feed-card">
+            <a href="articulo.html" class="feed-card-img">
+              <img src="assets/images/noticia-deportes.svg" alt="Deportes y Fútbol" loading="lazy">
+            </a>
+            <div class="feed-card-body">
+              <span class="badge badge-deportes">DEPORTES</span>
+              <h3 class="feed-card-title">
+                <a href="articulo.html">Liga 1: Resultados, tabla de posiciones y previa de la jornada definitoria del torneo</a>
+              </h3>
+              <p class="feed-card-snippet">
+                Los clubes tradicionales disputan partidos clave en Lima y provincias con miras a los cupos internacionales de la Copa Libertadores.
+              </p>
+              <div class="card-meta">
+                <time datetime="2026-09-09T08:00">Hace 4 horas</time>
+              </div>
+            </div>
+          </article>
+
+          <!-- Noticia 3 -->
+          <article class="feed-card">
+            <a href="articulo.html" class="feed-card-img">
+              <img src="assets/images/noticia-economia.svg" alt="Megapuerto y Comercio" loading="lazy">
+            </a>
+            <div class="feed-card-body">
+              <span class="badge badge-economia">ECONOMÍA</span>
+              <h3 class="feed-card-title">
+                <a href="articulo.html">Terminal Portuario de Chancay dinamiza envíos logísticos directos hacia mercados asiáticos</a>
+              </h3>
+              <p class="feed-card-snippet">
+                Operadores logísticos reportan reducción de costos y mejores tiempos de tránsito para la cadena exportadora nacional.
+              </p>
+              <div class="card-meta">
+                <time datetime="2026-09-09T07:30">Hace 5 horas</time>
+              </div>
+            </div>
+          </article>
+
+          <!-- Noticia 4 -->
+          <article class="feed-card">
+            <a href="articulo.html" class="feed-card-img">
+              <img src="assets/images/noticia-regiones.svg" alt="Provincias y Selva" loading="lazy">
+            </a>
+            <div class="feed-card-body">
+              <span class="badge badge-regiones">REGIONES</span>
+              <h3 class="feed-card-title">
+                <a href="articulo.html">Productores de San Martín y Junín colocan variedades especiales de café en ferias internacionales</a>
+              </h3>
+              <p class="feed-card-snippet">
+                Las cooperativas agrarias locales obtienen certificaciones orgánicas de alta valoración en Europa y Norteamérica.
+              </p>
+              <div class="card-meta">
+                <time datetime="2026-09-09T07:00">Hace 6 horas</time>
+              </div>
+            </div>
+          </article>
+
+        </div>
+
+        <!-- Bloque de Titulares Rápidos / Enfoque -->
+        <h2 class="section-title">
+          <span>Enfoque Nacional</span>
+          <a href="categoria.html?cat=politica" class="view-more">Más temas →</a>
+        </h2>
+
+        <div class="horizontal-news-list">
+          
+          <article class="horizontal-news-item">
+            <div class="horizontal-thumb">
+              <img src="assets/images/noticia-principal.svg" alt="Poder Judicial">
+            </div>
+            <div class="horizontal-info">
+              <span class="badge badge-politica">POLÍTICA</span>
+              <h4 class="horizontal-title">
+                <a href="articulo.html">Poder Judicial moderniza expediente judicial electrónico en 15 distritos judiciales del territorio</a>
+              </h4>
+              <div class="card-meta">
+                <time datetime="2026-09-09T06:30">Hace 7 horas</time>
+              </div>
+            </div>
+          </article>
+
+          <article class="horizontal-news-item">
+            <div class="horizontal-thumb">
+              <img src="assets/images/noticia-regiones.svg" alt="Amazonía y Clima">
+            </div>
+            <div class="horizontal-info">
+              <span class="badge badge-regiones">REGIONES</span>
+              <h4 class="horizontal-title">
+                <a href="articulo.html">Senamhi emite aviso meteorológico por incremento de viento y bajas temperaturas en la sierra sur</a>
+              </h4>
+              <div class="card-meta">
+                <time datetime="2026-09-09T06:00">Hace 7 horas</time>
+              </div>
+            </div>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- Columna Lateral (Sidebar) -->
+      <aside class="sidebar" aria-label="Contenido complementario y opinión">
+        
+        <!-- Widget: Opinión y Columnistas -->
+        <div class="widget-box">
+          <h3 class="widget-title">
+            <span>✍️ Opinión & Debate</span>
+          </h3>
+          <div class="opinion-list">
+            
+            <a href="articulo.html" class="opinion-item">
+              <div class="author-avatar">
+                <img src="assets/images/avatar-1.svg" alt="Carlos Mendoza">
+              </div>
+              <div class="opinion-info">
+                <span class="opinion-author">Dr. Carlos Mendoza</span>
+                <span class="opinion-title">"El desafío estructural de la descentralización productiva en el Perú"</span>
+              </div>
+            </a>
+
+            <a href="articulo.html" class="opinion-item">
+              <div class="author-avatar">
+                <img src="assets/images/avatar-2.svg" alt="Rosaura Valdivia">
+              </div>
+              <div class="opinion-info">
+                <span class="opinion-author">Mag. Rosaura Valdivia</span>
+                <span class="opinion-title">"Fortalecimiento institucional: el valor de la meritocracia en la función pública"</span>
+              </div>
+            </a>
+
+          </div>
+        </div>
+
+        <!-- Widget: Lo Más Leído -->
+        <div class="widget-box">
+          <h3 class="widget-title">
+            <span>🔥 Lo Más Leído</span>
+          </h3>
+          <ol class="ranked-list">
+            <li class="ranked-item">
+              <span class="ranked-number">1</span>
+              <a href="articulo.html" class="ranked-title">Cronograma y detalles para el cumplimiento de aportes y fondos previsionales en 2026</a>
+            </li>
+            <li class="ranked-item">
+              <span class="ranked-number">2</span>
+              <a href="articulo.html" class="ranked-title">Conoce el calendario oficial de feriados y días no laborables decretados en el Perú</a>
+            </li>
+            <li class="ranked-item">
+              <span class="ranked-number">3</span>
+              <a href="articulo.html" class="ranked-title">Reporte financiero: cómo se cotiza la canasta básica y el combustible esta semana</a>
+            </li>
+            <li class="ranked-item">
+              <span class="ranked-number">4</span>
+              <a href="articulo.html" class="ranked-title">Ampliación de vuelos interregionales conecta Cusco, Iquitos y Trujillo sin escala en Lima</a>
+            </li>
+            <li class="ranked-item">
+              <span class="ranked-number">5</span>
+              <a href="articulo.html" class="ranked-title">Guía práctica para trámites digitales en Reniec, Sunat y Banco de la Nación</a>
+            </li>
+          </ol>
+        </div>
+
+        <!-- Widget: Newsletter -->
+        <div class="newsletter-box">
+          <h4>Boletín Linea Abierta</h4>
+          <p>Recibe cada mañana en tu correo nuestro análisis informativo con las noticias clave del Perú.</p>
+          <form class="newsletter-form" onsubmit="event.preventDefault(); alert('Gracias por registrarte al boletín de Linea Abierta.');">
+            <input type="email" class="newsletter-input" placeholder="Tu correo electrónico..." required aria-label="Correo para el boletín">
+            <button type="submit" class="newsletter-btn">Suscribirme gratis</button>
+          </form>
+        </div>
+
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- 7. PIE DE PÁGINA INSTITUCIONAL -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        
+        <!-- Acerca de -->
+        <div class="footer-col footer-about">
+          <div class="brand-logo" style="color:#ffffff;">
+            <img src="assets/images/emblem-linea-abierta.svg" alt="Isotipo Linea Abierta" class="brand-emblem-icon" width="40" height="40">
+            <div class="brand-typography">
+              <div class="brand-title-main" style="color:#ffffff; font-size:1.5rem;">
+                LINEA ABIERTA<span class="gold-dot">.</span>
+              </div>
+              <div class="brand-tagline-text" style="color:var(--color-accent-light);">El portal informativo del Perú</div>
+            </div>
+          </div>
+          <p>
+            <strong>Linea Abierta</strong> (lineaabierta.net.pe) es un portal informativo peruano independiente, comprometido con la pluralidad, la rigurosidad y el acceso ciudadano a información oportuna y transparente.
+          </p>
+          <div class="topbar-socials" style="margin-top:1rem;">
+            <a href="https://lineaabierta.net.pe" aria-label="X">𝕏</a>
+            <a href="https://lineaabierta.net.pe" aria-label="Facebook">f</a>
+            <a href="https://lineaabierta.net.pe" aria-label="YouTube">yt</a>
+            <a href="https://lineaabierta.net.pe" aria-label="LinkedIn">in</a>
+          </div>
+        </div>
+
+        <!-- Secciones -->
+        <div class="footer-col">
+          <h5>Secciones</h5>
+          <ul>
+            <li><a href="categoria.html?cat=politica">Política & Congreso</a></li>
+            <li><a href="categoria.html?cat=actualidad">Actualidad Nacional</a></li>
+            <li><a href="categoria.html?cat=regiones">Regiones del Perú</a></li>
+            <li><a href="categoria.html?cat=economia">Economía & Negocios</a></li>
+            <li><a href="categoria.html?cat=deportes">Deportes</a></li>
+            <li><a href="categoria.html?cat=opinion">Columnas de Opinión</a></li>
+          </ul>
+        </div>
+
+        <!-- Institucional -->
+        <div class="footer-col">
+          <h5>Institucional</h5>
+          <ul>
+            <li><a href="articulo.html">Quiénes Somos</a></li>
+            <li><a href="articulo.html">Equipo Periodístico</a></li>
+            <li><a href="articulo.html">Código de Ética</a></li>
+            <li><a href="articulo.html">Políticas Editoriales</a></li>
+            <li><a href="articulo.html">Contacto y Publicidad</a></li>
+          </ul>
+        </div>
+
+        <!-- Legal y Reclamaciones -->
+        <div class="footer-col">
+          <h5>Atención Ciudadana</h5>
+          <p style="font-size:0.84rem; color:#cbe3d7; margin-bottom:1rem;">
+            Lima, Perú • Redacción central.<br>
+            Contacto: redaccion@lineaabierta.net.pe
+          </p>
+          <a href="articulo.html" class="reclamaciones-badge">
+            📖 Libro de Reclamaciones Virtual
+          </a>
+        </div>
+
+      </div>
+
+      <!-- Barra de Copyright -->
+      <div class="footer-bottom">
+        <div>
+          © 2026 <strong>Linea Abierta</strong> (lineaabierta.net.pe). Todos los derechos reservados.
+        </div>
+        <div class="footer-legal-links">
+          <a href="articulo.html">Términos y Condiciones</a>
+          <a href="articulo.html">Privacidad</a>
+          <a href="index.html">Portada</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 8. MODAL DE BÚSQUEDA -->
+  <div class="search-modal-overlay" id="search-modal" role="dialog" aria-modal="true" aria-label="Búsqueda de noticias">
+    <div class="search-modal-container">
+      <div class="search-modal-header">
+        <h4 style="font-weight:700; color:var(--text-primary);">Buscar en Linea Abierta</h4>
+        <button class="search-modal-close" id="search-modal-close" aria-label="Cerrar modal">✕</button>
+      </div>
+      <form class="search-input-wrap" onsubmit="event.preventDefault(); window.location.href='categoria.html?q=' + encodeURIComponent(document.getElementById('search-input').value);">
+        <span class="search-icon-inside">🔍</span>
+        <input type="search" id="search-input" placeholder="Escribe tu búsqueda y presiona Enter..." autocomplete="off">
+      </form>
+      <div style="margin-top:0.85rem; font-size:0.78rem; color:var(--text-muted);">
+        Temas populares: <em>Reforma política, Tipo de cambio, Arequipa, Obras viales, Liga 1</em>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. MENÚ LATERAL RESPONSIVE (DRAWER MÓVIL) -->
+  <div class="mobile-drawer-overlay" id="drawer-overlay"></div>
+  <div class="mobile-drawer" id="mobile-drawer" role="navigation" aria-label="Menú móvil">
+    <div class="drawer-header">
+      <div class="brand-logo" style="color:#ffffff;">
+        <img src="assets/images/emblem-linea-abierta.svg" alt="Isotipo Linea Abierta" class="brand-emblem-icon" width="38" height="38">
+        <div class="brand-typography">
+          <div class="brand-title-main" style="color:#ffffff; font-size:1.35rem;">
+            LINEA ABIERTA<span class="gold-dot">.</span>
+          </div>
+        </div>
+      </div>
+      <button id="drawer-close-btn" style="color:#fff; font-size:1.4rem;" aria-label="Cerrar menú">✕</button>
+    </div>
+    <ul class="drawer-nav-list">
+      <li class="drawer-nav-item"><a href="index.html">Portada</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=politica">Política</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=actualidad">Actualidad</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=regiones">Regiones</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=economia">Economía</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=deportes">Deportes</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=opinion">Opinión</a></li>
+      <li class="drawer-nav-item"><a href="categoria.html?cat=tendencias">Tendencias</a></li>
+    </ul>
+    <div style="margin-top:auto; padding-top:1.5rem; border-top:1px solid rgba(255,255,255,0.1); font-size:0.78rem; color:#a3c4b5;">
+      lineaabierta.net.pe • El portal informativo del Perú
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+</body>
+</html>
