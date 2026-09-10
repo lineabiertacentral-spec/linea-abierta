@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Administración | Linea Abierta</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/images/emblem-linea-abierta.svg">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+  <div class="admin-layout">
+    
+    <!-- BARRA LATERAL (SIDEBAR) -->
+    <aside class="admin-sidebar">
+      <div class="sidebar-header">
+        <a href="index.html" class="sidebar-logo">
+          <img src="../assets/images/emblem-linea-abierta.svg" alt="Isotipo Linea Abierta">
+          <span>LINEA ABIERTA<span class="gold-dot">.</span></span>
+        </a>
+      </div>
+
+      <div class="sidebar-user-badge">
+        <span>👤 <strong id="admin-username-display">Cargando...</strong></span>
+        <span style="font-size: 0.7rem; background: #0d7350; color: #fff; padding: 2px 6px; border-radius: 4px;">2FA ACTIVO</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <ul class="sidebar-menu">
+          <li class="sidebar-item active">
+            <a href="index.html">📰 Gestión de Noticias</a>
+          </li>
+          <li class="sidebar-item">
+            <a href="editor.html">➕ Nueva Noticia</a>
+          </li>
+          <li class="sidebar-item">
+            <a href="../index.html" target="_blank">🌐 Ver Portal Público</a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="btn-logout" class="btn-logout">
+          🚪 Cerrar Sesión
+        </button>
+      </div>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="admin-main">
+      
+      <!-- Topbar -->
+      <header class="admin-topbar">
+        <div class="topbar-title">
+          <h1>Gestión Editorial</h1>
+        </div>
+        <div>
+          <a href="editor.html" class="btn-primary">
+            ➕ Redactar Noticia
+          </a>
+        </div>
+      </header>
+
+      <!-- Panel de Contenido -->
+      <div class="admin-content">
+        
+        <!-- Métricas Rápidas -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-card-title">Total Noticias</div>
+            <div class="stat-card-value" id="stat-total-articles">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-title">Publicadas en Portada</div>
+            <div class="stat-card-value" id="stat-published-articles" style="color: var(--admin-emerald);">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-title">Borradores</div>
+            <div class="stat-card-value" id="stat-draft-articles" style="color: var(--admin-text-muted);">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-title">Programadas</div>
+            <div class="stat-card-value" id="stat-scheduled-articles" style="color: var(--admin-info);">-</div>
+          </div>
+        </div>
+
+        <!-- Tabla y Filtros -->
+        <div class="table-panel">
+          
+          <div class="table-toolbar">
+            <div class="toolbar-filters">
+              <input type="text" id="filter-search" class="search-input" placeholder="🔍 Buscar por título o slug...">
+              
+              <select id="filter-category" class="select-filter">
+                <option value="">Todas las categorías</option>
+              </select>
+
+              <select id="filter-status" class="select-filter">
+                <option value="">Todos los estados</option>
+                <option value="published">Publicadas</option>
+                <option value="draft">Borradores</option>
+                <option value="scheduled">Programadas</option>
+                <option value="archived">Archivadas</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Título & Ruta</th>
+                  <th>Categoría</th>
+                  <th>Estado</th>
+                  <th>Autor</th>
+                  <th>Fecha</th>
+                  <th style="width: 110px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="articles-tbody">
+                <!-- Se poblará vía admin.js -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="table-pagination">
+            <span id="pagination-info">Cargando información...</span>
+            <div style="display: flex; gap: 0.5rem;">
+              <button id="btn-prev-page" class="btn-icon" disabled>← Anterior</button>
+              <button id="btn-next-page" class="btn-icon" disabled>Siguiente →</button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <script src="js/admin.js"></script>
+</body>
+</html>

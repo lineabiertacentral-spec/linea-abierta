@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso Administrativo | Linea Abierta</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/images/emblem-linea-abierta.svg">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="login-body">
+
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-logo">
+        <img src="../assets/images/emblem-linea-abierta.svg" alt="Linea Abierta">
+        <span>LINEA ABIERTA<span style="color: var(--admin-accent);">.</span></span>
+      </div>
+      <p class="login-subtitle">Panel de Control Editorial y Redacción</p>
+    </div>
+
+    <!-- Indicador de Pasos -->
+    <div class="step-indicator">
+      <div class="step-dot active" id="dot-1"></div>
+      <div class="step-dot" id="dot-2"></div>
+    </div>
+
+    <!-- Alertas -->
+    <div class="alert-error" id="alert-error"></div>
+    <div class="alert-success" id="alert-success"></div>
+
+    <!-- PASO 1: USUARIO Y CONTRASEÑA -->
+    <div id="step-1-box">
+      <form id="form-step-1">
+        <div class="form-group">
+          <label class="form-label" for="login-username" style="color: #cbd5e1;">Usuario</label>
+          <input type="text" id="login-username" class="login-input" placeholder="Tu usuario administrador" autocomplete="username" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="login-password" style="color: #cbd5e1;">Contraseña</label>
+          <input type="password" id="login-password" class="login-input" placeholder="••••••••••••" autocomplete="current-password" required>
+        </div>
+
+        <button type="submit" class="login-btn" id="btn-step-1">
+          Continuar con 2FA →
+        </button>
+      </form>
+    </div>
+
+    <!-- PASO 2: VERIFICACIÓN 2FA / RECUPERACIÓN -->
+    <div id="step-2-box" style="display: none;">
+      <form id="form-step-2">
+        <div id="totp-input-group" class="form-group">
+          <label class="form-label" for="login-totp" style="color: #cbd5e1;">Código de Seguridad (6 dígitos)</label>
+          <p style="font-size: 0.8rem; color: #8bb3a2; margin-bottom: 0.5rem;">
+            Abre tu aplicación Google Authenticator o compatible e ingresa el código activo.
+          </p>
+          <input type="text" id="login-totp" class="login-input" placeholder="123456" maxlength="6" inputmode="numeric" autocomplete="one-time-code" style="letter-spacing: 4px; font-size: 1.25rem; text-align: center;">
+        </div>
+
+        <div id="recovery-input-group" class="form-group" style="display: none;">
+          <label class="form-label" for="login-recovery" style="color: #cbd5e1;">Código de Recuperación de Emergencia</label>
+          <p style="font-size: 0.8rem; color: #8bb3a2; margin-bottom: 0.5rem;">
+            Ingresa uno de tus códigos de respaldo de un solo uso (ej. XXXX-XXXX-XXXX).
+          </p>
+          <input type="text" id="login-recovery" class="login-input" placeholder="XXXX-XXXX-XXXX" style="letter-spacing: 2px; text-align: center; text-transform: uppercase;">
+        </div>
+
+        <button type="submit" class="login-btn" id="btn-step-2">
+          Acceder al Panel
+        </button>
+
+        <div style="text-align: center; margin-top: 1rem;">
+          <button type="button" id="btn-toggle-recovery" style="background: none; border: none; color: #9cd5bc; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
+            ¿No tienes acceso a tu app? Usar código de recuperación
+          </button>
+        </div>
+      </form>
+    </div>
+
+  </div>
+
+  <script src="js/auth.js"></script>
+</body>
+</html>

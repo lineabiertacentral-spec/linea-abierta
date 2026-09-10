@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editor de Noticias | Linea Abierta</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/images/emblem-linea-abierta.svg">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+  <div class="admin-layout">
+    
+    <!-- BARRA LATERAL (SIDEBAR) -->
+    <aside class="admin-sidebar">
+      <div class="sidebar-header">
+        <a href="index.html" class="sidebar-logo">
+          <img src="../assets/images/emblem-linea-abierta.svg" alt="Isotipo Linea Abierta">
+          <span>LINEA ABIERTA<span class="gold-dot">.</span></span>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <ul class="sidebar-menu">
+          <li class="sidebar-item">
+            <a href="index.html">📰 Gestión de Noticias</a>
+          </li>
+          <li class="sidebar-item active">
+            <a href="editor.html">➕ Editor de Noticia</a>
+          </li>
+          <li class="sidebar-item">
+            <a href="../index.html" target="_blank">🌐 Ver Portal Público</a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="admin-main">
+      
+      <!-- Topbar -->
+      <header class="admin-topbar">
+        <div class="topbar-title">
+          <h1 id="editor-page-title">Redactar Noticia</h1>
+        </div>
+        <div>
+          <a href="index.html" class="btn-icon">
+            ← Volver al Listado
+          </a>
+        </div>
+      </header>
+
+      <!-- Panel de Contenido -->
+      <div class="admin-content">
+        
+        <form id="article-form">
+          <div class="editor-grid">
+            
+            <!-- COLUMNA PRINCIPAL (CONTENIDO) -->
+            <div class="editor-main-col">
+              
+              <div class="editor-card">
+                <div class="form-group">
+                  <label class="form-label" for="article-title">Título de la Noticia *</label>
+                  <input type="text" id="article-title" class="form-input" placeholder="Ej: Congreso debate reformas institucionales..." required style="font-size: 1.15rem; font-weight: 600;">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="article-slug">URL Amigable (Slug)</label>
+                  <input type="text" id="article-slug" class="form-input" placeholder="congreso-debate-reformas-institucionales" style="font-family: var(--admin-font-mono); font-size: 0.85rem;">
+                  <span style="font-size: 0.75rem; color: var(--admin-text-muted);">
+                    Se genera automáticamente a partir del título. Puedes personalizarlo.
+                  </span>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="article-summary">Bajada / Resumen (Lead)</label>
+                  <textarea id="article-summary" class="form-textarea" placeholder="Breve síntesis de la noticia para la portada y redes sociales..."></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="article-content">Cuerpo de la Noticia (HTML o Texto) *</label>
+                  <textarea id="article-content" class="form-textarea editor-textarea" placeholder="Escribe aquí el contenido editorial completo de la nota..." required></textarea>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- COLUMNA LATERAL (METADATOS Y PUBLICACIÓN) -->
+            <div class="editor-side-col">
+              
+              <div class="editor-card">
+                <h3 style="font-size: 1rem; color: var(--admin-primary); margin-bottom: 1rem; border-bottom: 1px solid var(--admin-border); padding-bottom: 0.5rem;">
+                  ⚙️ Publicación y Estado
+                </h3>
+
+                <div class="form-group">
+                  <label class="form-label" for="article-status">Estado del Artículo</label>
+                  <select id="article-status" class="form-select">
+                    <option value="draft">Borrador (Oculto)</option>
+                    <option value="published">Publicado (Inmediato)</option>
+                    <option value="scheduled">Programado (Fecha futura)</option>
+                  </select>
+                </div>
+
+                <!-- Campo condicional para fecha programada -->
+                <div class="form-group" id="schedule-container" style="display: none; background: #eff6ff; padding: 0.75rem; border-radius: 6px; border: 1px solid #bfdbfe;">
+                  <label class="form-label" for="article-schedule-time" style="color: #1e40af;">
+                    ⏰ Fecha y Hora Programada
+                  </label>
+                  <input type="datetime-local" id="article-schedule-time" class="form-input">
+                  <span style="font-size: 0.75rem; color: #1e40af; margin-top: 0.25rem; display: block;">
+                    La noticia se activará automáticamente al cumplirse la hora.
+                  </span>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="article-category">Sección / Categoría *</label>
+                  <select id="article-category" class="form-select" required>
+                    <option value="">Cargando categorías...</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="article-author">Autor / Firma</label>
+                  <input type="text" id="article-author" class="form-input" placeholder="Redacción Linea Abierta">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="article-image">URL de Imagen de Portada</label>
+                  <input type="text" id="article-image" class="form-input" placeholder="assets/images/noticia-principal.svg">
+                </div>
+
+                <div class="editor-actions">
+                  <button type="submit" class="btn-primary" style="justify-content: center; width: 100%;">
+                    💾 Guardar Noticia
+                  </button>
+
+                  <button type="button" id="btn-save-draft" class="btn-icon" style="justify-content: center; padding: 0.6rem;">
+                    📝 Guardar como Borrador
+                  </button>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        </form>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <script src="js/editor.js"></script>
+</body>
+</html>
