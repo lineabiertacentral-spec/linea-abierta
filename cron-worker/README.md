@@ -41,9 +41,18 @@ npx wrangler deploy
 
 ## 🧪 Endpoints para Pruebas y Diagnóstico
 Puedes probar el funcionamiento del Worker en cualquier momento realizando una petición HTTP a su URL:
-- `GET /status` — Estado del Worker, hora de Perú, métricas de D1 y proveedores configurados (dry-run).
-- `GET /sources` — Vista previa en vivo de las noticias detectadas desde RPP Noticias sin guardar en D1.
-- `GET /run` o `POST /run` — Ejecución activa manual del ciclo: lee fuentes, filtra duplicados, selecciona hasta un máximo de 9 noticias y las guarda en D1 como borrador (`status = 'draft'`).
+- `GET /status` — Diagnóstico seguro del Worker, hora de Perú, métricas de D1 y estado de protección (dry-run, solo lectura).
+- `GET /sources` — Vista previa en vivo de las noticias detectadas desde RPP Noticias sin guardar en D1 (solo lectura).
+- `POST /run` o `GET /run` — Ejecución activa manual del ciclo: lee fuentes, filtra duplicados, selecciona hasta un máximo de 9 noticias y las guarda en D1 como borrador (`status = 'draft'`). **PROTEGIDO**: Requiere autenticación mediante la variable secreta `CRON_SECRET` configurada en el Worker.
+
+### 🔒 Autenticación para Ejecución Manual (`/run`)
+Para invocar `/run` de forma manual, envía el token mediante cualquiera de estas 3 formas:
+1. **Cabecera Bearer**: `Authorization: Bearer <TU_CRON_SECRET>`
+2. **Cabecera personalizada**: `X-Cron-Key: <TU_CRON_SECRET>`
+3. **Parámetro URL**: `https://linea-abierta-cron.<tu-subdominio>.workers.dev/run?key=<TU_CRON_SECRET>`
+
+> [!NOTE]
+> El **Cron automático** diario (06:00 a. m. Perú) se ejecuta internamente dentro del runtime de Cloudflare Workers y **no requiere cabeceras HTTP ni intervención manual**.
 
 ---
 

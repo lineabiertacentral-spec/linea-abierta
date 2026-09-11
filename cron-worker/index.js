@@ -328,7 +328,77 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
       failed_inserts: insertErrors.length
     },
     saved_drafts: insertedArticles,
-    errors: insertErrors
+    errors: insertErrors,
+    security: {
+      manual_execution_endpoint: "/run",
+      manual_execution_protected: true,
+      cron_secret_configured: Boolean(env && (env.CRON_SECRET || env.ADMIN_SECRET)),
+      automatic_cron_isolated: true // El Cron diario se ejecuta de forma interna sin requerir cabeceras HTTP
+    }
+  };
+}
+
+/**
+ * Comparación de cadenas en tiempo constante (timing-safe) para mitigar ataques de temporización.
+ */
+export function timingSafeEqualStr(a, b) {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  const encoder = new TextEncoder();
+  const aBytes = encoder.encode(a);
+  const bBytes = encoder.encode(b);
+  if (aBytes.byteLength !== bBytes.byteLength) return false;
+  let diff = 0;
+  for (let i = 0; i < aBytes.byteLength; i++) {
+    diff |= aBytes[i] ^ bBytes[i];
+  }
+  return diff === 0;
+}
+
+/**
+ * Valida la autorización para la ejecución manual del endpoint /run.
+ * Métodos aceptados:
+ * 1. Cabecera Authorization: Bearer <token>
+ * 2. Cabecera X-Cron-Key: <token>
+ * 3. Parámetro en la URL ?key=<token> o ?token=<token>
+ */
+export function checkManualExecutionAuth(request, env) {
+  if (!env) {
+    return { authorized: false, reason: "Entorno no disponible." };
+  }
+
+  const secret = env.CRON_SECRET || env.ADMIN_SECRET;
+  if (!secret || typeof secret !== "string" || secret.trim().length === 0) {
+    return {
+      authorized: false,
+      reason: "La variable de entorno secreta CRON_SECRET no está configurada en Cloudflare Workers."
+    };
+  }
+
+  const trimmedSecret = secret.trim();
+
+  // 1. Cabecera Authorization: Bearer <token>
+  const authHeader = request.headers.get("Authorization") || "";
+  const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+  if (bearerMatch && timingSafeEqualStr(bearerMatch[1].trim(), trimmedSecret)) {
+    return { authorized: true, method: "bearer_header" };
+  }
+
+  // 2. Cabecera personalizada X-Cron-Key: <token>
+  const headerKey = request.headers.get("X-Cron-Key") || "";
+  if (headerKey && timingSafeEqualStr(headerKey.trim(), trimmedSecret)) {
+    return { authorized: true, method: "x_cron_key_header" };
+  }
+
+  // 3. Parámetro en la URL: ?key=<token> o ?token=<token>
+  const url = new URL(request.url);
+  const queryKey = url.searchParams.get("key") || url.searchParams.get("token") || "";
+  if (queryKey && timingSafeEqualStr(queryKey.trim(), trimmedSecret)) {
+    return { authorized: true, method: "query_parameter" };
+  }
+
+  return {
+    authorized: false,
+    reason: "Clave secreta no proporcionada o inválida."
   };
 }
 
@@ -336,6 +406,7 @@ export default {
   /**
    * Listener de eventos programados (Cron Trigger).
    * Se ejecuta automáticamente a las 06:00 a. m. hora de Perú (11:00 UTC).
+   * El Cron automático es 100% interno y no depende de llamadas HTTP externas ni de claves secretas.
    */
   async scheduled(event, env, ctx) {
     console.log(`[Cron Trigger Iniciado] ${event.cron} | ${new Date(event.scheduledTime).toISOString()}`);
@@ -357,15 +428,15 @@ export default {
 
   /**
    * Listener HTTP (Fetch).
-   * Permite probar la detección de fuentes e inserción bajo demanda.
+   * Proporciona diagnóstico seguro (/status) y ejecución manual protegida (/run).
    */
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    // 1. Estado y diagnóstico general
+    // 1. Estado y diagnóstico general seguro (dry-run: nunca modifica D1)
     if (url.pathname === "/" || url.pathname === "/status") {
       try {
-        const result = await runDailyScheduler(env, `http:${request.method}`, true); // dryRun = true para /status
+        const result = await runDailyScheduler(env, `http:${request.method}`, true);
         return new Response(JSON.stringify(result, null, 2), {
           status: 200,
           headers: {
@@ -382,7 +453,7 @@ export default {
       }
     }
 
-    // 2. Vista previa en vivo de las fuentes (sin tocar D1)
+    // 2. Vista previa en vivo de las fuentes (solo lectura, sin tocar D1)
     if (url.pathname === "/sources") {
       try {
         const sources = await fetchAllActiveSources();
@@ -402,10 +473,27 @@ export default {
       }
     }
 
-    // 3. Ejecución activa del proceso de ingesta (guarda borradores en D1)
+    // 3. Ejecución activa manual (guarda borradores en D1) - PROTEGIDO CON CLAVE SECRETA
     if (url.pathname === "/run") {
+      const auth = checkManualExecutionAuth(request, env);
+
+      if (!auth.authorized) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: "Acceso no autorizado al endpoint de ejecución manual (/run).",
+          reason: auth.reason,
+          help: "Configura la variable secreta CRON_SECRET en Cloudflare Workers (Settings > Variables) y envía la clave en la cabecera Authorization (Bearer), X-Cron-Key o parámetro ?key=..."
+        }, null, 2), {
+          status: 401,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "WWW-Authenticate": "Bearer realm='linea-abierta-cron'"
+          }
+        });
+      }
+
       try {
-        const result = await runDailyScheduler(env, `http:${request.method}`, false);
+        const result = await runDailyScheduler(env, `http_auth:${request.method}:${auth.method}`, false);
         return new Response(JSON.stringify(result, null, 2), {
           status: 200,
           headers: {
@@ -425,10 +513,10 @@ export default {
     return new Response(JSON.stringify({
       error: "Ruta no encontrada.",
       endpoints_disponibles: [
-        { path: "/", description: "Diagnóstico general y estado (dry-run)" },
-        { path: "/status", description: "Estado y fuentes configuradas" },
-        { path: "/sources", description: "Vista previa en vivo del feed RPP sin guardar" },
-        { path: "/run", description: "Ejecutar ingesta activa y guardar borradores en D1" }
+        { path: "/", description: "Diagnóstico general seguro (dry-run, lectura segura)" },
+        { path: "/status", description: "Estado, hora de Perú y fuentes configuradas" },
+        { path: "/sources", description: "Vista previa en vivo del feed RPP (solo lectura)" },
+        { path: "/run", description: "Ejecutar ingesta activa y guardar borradores en D1 (PROTEGIDO con CRON_SECRET)" }
       ]
     }, null, 2), {
       status: 404,

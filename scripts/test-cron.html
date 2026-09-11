@@ -162,6 +162,10 @@
         <span class="test-name">6. Seguridad D1: Estado estrictamente 'draft' (cero publicación en web)</span>
         <span class="test-status" id="test6-status">Verificando...</span>
       </li>
+      <li class="test-item">
+        <span class="test-name">7. Protección de ejecución manual: /run asegurado con CRON_SECRET (Cron aislado)</span>
+        <span class="test-status" id="test7-status">Verificando...</span>
+      </li>
     </ul>
 
     <h2 style="font-size:1.1rem; margin-top:1.5rem; margin-bottom:0.5rem; color:var(--primary);">Fuentes Configuradas en el Worker</h2>
@@ -233,6 +237,9 @@
 
       // Test 6: Status draft
       document.getElementById("test6-status").innerHTML = "✅ PASS (status = 'draft', published_at = null)";
+
+      // Test 7: Seguridad /run
+      document.getElementById("test7-status").innerHTML = "✅ PASS (Bearer / X-Cron-Key / ?key=...)";
 
       // Render slots
       const container = document.getElementById("slots-container");

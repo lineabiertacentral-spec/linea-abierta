@@ -24,7 +24,9 @@ import {
 
 import {
   selectDailyNewsCandidates,
-  runDailyScheduler
+  runDailyScheduler,
+  timingSafeEqualStr,
+  checkManualExecutionAuth
 } from "../cron-worker/index.js";
 
 async function runTests() {
@@ -169,6 +171,55 @@ async function runTests() {
       assert(publishedAtParam === null, `Noticia ${idx + 1}: published_at = null (NO publicado en portal)`);
     });
   }
+
+  // 8. Seguridad: Protección del Endpoint Manual /run
+  console.log("\n--- 8. Seguridad: Protección del Endpoint Manual /run ---");
+  // Test timing-safe
+  assert(timingSafeEqualStr("clave-secreta-123", "clave-secreta-123") === true, "Comparación idéntica exitosa");
+  assert(timingSafeEqualStr("clave-secreta-123", "clave-incorrecta") === false, "Comparación diferente rechazada");
+  assert(timingSafeEqualStr("clave-corta", "clave-mucho-mas-larga") === false, "Longitudes distintas rechazadas");
+
+  const mockSecret = "mi_clave_super_secreta_2026";
+  const envWithSecret = { CRON_SECRET: mockSecret };
+  const envWithoutSecret = {};
+
+  // Caso A: Sin CRON_SECRET en el entorno -> Rechazado
+  const reqNoEnv = new Request("https://worker.dev/run", {
+    headers: { "Authorization": `Bearer ${mockSecret}` }
+  });
+  const resNoEnv = checkManualExecutionAuth(reqNoEnv, envWithoutSecret);
+  assert(resNoEnv.authorized === false, "Rechazado si CRON_SECRET no está configurado");
+
+  // Caso B: Petición anónima sin cabeceras ni parámetros -> Rechazado
+  const reqAnon = new Request("https://worker.dev/run");
+  const resAnon = checkManualExecutionAuth(reqAnon, envWithSecret);
+  assert(resAnon.authorized === false, "Petición anónima rechazada (401)");
+
+  // Caso C: Petición con clave incorrecta -> Rechazado
+  const reqWrong = new Request("https://worker.dev/run", {
+    headers: { "X-Cron-Key": "clave_equivocada" }
+  });
+  const resWrong = checkManualExecutionAuth(reqWrong, envWithSecret);
+  assert(resWrong.authorized === false, "Petición con clave incorrecta rechazada");
+
+  // Caso D: Petición válida con Bearer Token -> Autorizado
+  const reqBearer = new Request("https://worker.dev/run", {
+    headers: { "Authorization": `Bearer ${mockSecret}` }
+  });
+  const resBearer = checkManualExecutionAuth(reqBearer, envWithSecret);
+  assert(resBearer.authorized === true && resBearer.method === "bearer_header", "Autorizado mediante Bearer Token");
+
+  // Caso E: Petición válida con X-Cron-Key -> Autorizado
+  const reqHeader = new Request("https://worker.dev/run", {
+    headers: { "X-Cron-Key": mockSecret }
+  });
+  const resHeader = checkManualExecutionAuth(reqHeader, envWithSecret);
+  assert(resHeader.authorized === true && resHeader.method === "x_cron_key_header", "Autorizado mediante cabecera X-Cron-Key");
+
+  // Caso F: Petición válida con parámetro ?key=... -> Autorizado
+  const reqQuery = new Request(`https://worker.dev/run?key=${mockSecret}`);
+  const resQuery = checkManualExecutionAuth(reqQuery, envWithSecret);
+  assert(resQuery.authorized === true && resQuery.method === "query_parameter", "Autorizado mediante parámetro ?key=...");
 
   // --------------------------------------------------------------------------
   // RESUMEN
