@@ -43,7 +43,7 @@ npx wrangler deploy
 Puedes probar el funcionamiento del Worker en cualquier momento realizando una petición HTTP a su URL:
 - `GET /status` — Diagnóstico seguro del Worker, hora de Perú, métricas de D1 y estado de protección (dry-run, solo lectura).
 - `GET /sources` — Vista previa en vivo de las noticias detectadas desde RPP Noticias sin guardar en D1 (solo lectura).
-- `POST /run` o `GET /run` — Ejecución activa manual del ciclo: lee fuentes, filtra duplicados, selecciona hasta un máximo de 9 noticias y las guarda en D1 como borrador (`status = 'draft'`). **PROTEGIDO**: Requiere autenticación mediante la variable secreta `CRON_SECRET` configurada en el Worker.
+- `POST /run` o `GET /run` — Ejecución activa manual del ciclo: lee fuentes, filtra duplicados, respeta la cuota diaria estricta de máximo 9 noticias y las guarda en D1 como borrador (`status = 'draft'` y `published_at = NULL`). **PROTEGIDO**: Requiere autenticación mediante la variable secreta `CRON_SECRET` configurada en el Worker.
 
 ### 🔒 Autenticación para Ejecución Manual (`/run`)
 Para invocar `/run` de forma manual, envía el token mediante cualquiera de estas 3 formas:
@@ -52,7 +52,18 @@ Para invocar `/run` de forma manual, envía el token mediante cualquiera de esta
 3. **Parámetro URL**: `https://linea-abierta-cron.<tu-subdominio>.workers.dev/run?key=<TU_CRON_SECRET>`
 
 > [!NOTE]
-> El **Cron automático** diario (06:00 a. m. Perú) se ejecuta internamente dentro del runtime de Cloudflare Workers y **no requiere cabeceras HTTP ni intervención manual**.
+> - El **Cron automático** diario (06:00 a. m. Perú) se ejecuta internamente dentro del runtime de Cloudflare Workers y **no requiere cabeceras HTTP ni intervención manual**.
+> - Para forzar una ejecución manual que ignore la cuota de noticias ya guardadas hoy (por ejemplo durante pruebas), puedes añadir `?force=true` a la URL de `/run`.
+
+---
+
+## 🛡️ Aislamiento y Verificación desde `/admin`
+1. **Aislamiento Total del Portal Público**: Todos los artículos guardados por el Worker tienen `status = 'draft'` y `published_at = NULL`. La API pública (`/api/articles`) solo retorna noticias con `status = 'published'`, por lo que los borradores son **100% invisibles** en la portada, categorías y artículos individuales.
+2. **Verificación en el Panel `/admin`**:
+   - Inicia sesión en `https://lineaabierta.net.pe/admin/login.html`.
+   - En la tarjeta **Borradores** del panel verás el conteo exacto de noticias detectadas.
+   - En la tabla de noticias, filtra por el selector **Borradores** para ver la lista completa con títulos, categorías asignadas y el distintivo "Borrador".
+   - Puedes hacer clic en **Editar** para revisar el contenido crudo preservado con los metadatos de la fuente original.
 
 ---
 

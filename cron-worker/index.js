@@ -181,7 +181,23 @@ export function selectDailyNewsCandidates(candidates, existingSlugsSet, maxLimit
 }
 
 /**
- * Ejecutor del ciclo diario de ingesta y guardado en D1 (FASE 6.4 - Primera Etapa).
+ * Detecta dinámicamente las columnas disponibles en la tabla 'articles' de Cloudflare D1
+ * para máxima compatibilidad y tolerancia a variaciones de esquema.
+ */
+export async function getArticleTableColumns(db) {
+  try {
+    const { results } = await db.prepare("PRAGMA table_info(articles)").all();
+    if (results && Array.isArray(results) && results.length > 0) {
+      return new Set(results.map(r => r.name.toLowerCase()));
+    }
+  } catch (err) {
+    console.warn("No se pudo obtener información de columnas de articles vía PRAGMA:", err?.message || err);
+  }
+  return new Set();
+}
+
+/**
+ * Ejecutor del ciclo diario de ingesta y guardado en D1 (FASE 6.4 - Almacenamiento Real).
  * @param {object} env - Variables de entorno y bindings de Cloudflare Workers
  * @param {string} triggerSource - Identificador de origen ('cron', 'http', etc.)
  * @param {boolean} dryRun - Si es true, solo consulta fuentes sin guardar en D1
@@ -199,6 +215,8 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
   const existingSlugsSet = new Set();
   const existingTitlesSet = new Set();
 
+  let todayArticlesCount = 0;
+
   // 1. Verificar conexión a D1 y obtener artículos existentes para evitar duplicados
   if (env && env.DB) {
     try {
@@ -208,6 +226,17 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
         message: "Conexión con Cloudflare D1 (linea-abierta-db) activa.",
         total_articles: articleCount ? articleCount.total : 0
       };
+
+      // Contar noticias registradas hoy para respetar la cuota estricta de 9 por día
+      try {
+        const todayPrefix = timeInfo.utc_iso.slice(0, 10);
+        const todayCountRow = await env.DB.prepare(
+          "SELECT COUNT(*) AS total FROM articles WHERE created_at LIKE ?"
+        ).bind(`${todayPrefix}%`).first();
+        todayArticlesCount = todayCountRow ? Number(todayCountRow.total || 0) : 0;
+      } catch {
+        todayArticlesCount = 0;
+      }
 
       // Cargar títulos y slugs recientes para deduplicación estricta
       const recentRows = await env.DB.prepare("SELECT title, slug FROM articles ORDER BY id DESC LIMIT 300").all();
@@ -237,8 +266,14 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
     return !isSlugDuplicate && !isTitleDuplicate;
   });
 
-  // 4. Seleccionar hasta un máximo de 9 noticias balanceadas para el día
-  const selectedToStore = selectDailyNewsCandidates(freshCandidates, existingSlugsSet, 9);
+  const dailyQuotaLimit = 9;
+  const isForced = typeof triggerSource === "string" && triggerSource.includes("force");
+  const remainingQuota = isForced ? dailyQuotaLimit : Math.max(0, dailyQuotaLimit - todayArticlesCount);
+
+  // 4. Seleccionar hasta un máximo de 9 noticias balanceadas para el día (respetando cuota restante)
+  const selectedToStore = remainingQuota > 0
+    ? selectDailyNewsCandidates(freshCandidates, existingSlugsSet, remainingQuota)
+    : [];
 
   const insertedArticles = [];
   const insertErrors = [];
@@ -246,6 +281,7 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
   // 5. Guardar en D1 únicamente si la base de datos está disponible y no es dryRun
   if (env && env.DB && !dryRun && selectedToStore.length > 0) {
     const nowIso = timeInfo.utc_iso;
+    const availableCols = await getArticleTableColumns(env.DB);
 
     for (const item of selectedToStore) {
       try {
@@ -259,36 +295,72 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
         // Formatear contenido crudo preservando metadatos para la fase de procesamiento IA
         const rawContentWithMeta = `<!-- FUENTE: ${item.source_name} | URL: ${item.source_url} | DETECTADO: ${nowIso} -->\n\n${item.raw_content}`;
 
-        const insertSql = `
-          INSERT INTO articles (
-            title,
-            slug,
-            summary,
-            content,
-            image_url,
-            author_name,
-            category_id,
-            status,
-            published_at,
-            created_at,
-            updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
+        const insertData = {};
+        const setCol = (colName, val) => {
+          if (availableCols.size === 0 || availableCols.has(colName.toLowerCase())) {
+            insertData[colName] = val;
+          }
+        };
 
-        // status = 'draft' y published_at = null garantiza 100% que NO se publica en la web pública
-        const result = await env.DB.prepare(insertSql).bind(
-          item.title,
-          finalSlug,
-          item.summary,
-          rawContentWithMeta,
-          item.image_url || "",
-          `${item.source_name} (Fuente Detectada)`,
-          item.category_id,
-          "draft",
-          null,
-          nowIso,
-          nowIso
-        ).run();
+        setCol("title", item.title);
+        setCol("slug", finalSlug);
+
+        // Resumen / Bajada
+        if (availableCols.size === 0 || availableCols.has("summary")) {
+          insertData["summary"] = item.summary || "";
+        } else if (availableCols.has("lead")) {
+          insertData["lead"] = item.summary || "";
+        } else if (availableCols.has("excerpt")) {
+          insertData["excerpt"] = item.summary || "";
+        }
+
+        // Contenido
+        if (availableCols.size === 0 || availableCols.has("content")) {
+          insertData["content"] = rawContentWithMeta;
+        } else if (availableCols.has("body")) {
+          insertData["body"] = rawContentWithMeta;
+        }
+
+        // Imagen
+        if (availableCols.size === 0 || availableCols.has("image_url")) {
+          insertData["image_url"] = item.image_url || "";
+        } else if (availableCols.has("cover_image")) {
+          insertData["cover_image"] = item.image_url || "";
+        } else if (availableCols.has("image")) {
+          insertData["image"] = item.image_url || "";
+        }
+
+        // Autor
+        const authorVal = `${item.source_name} (Fuente Detectada)`;
+        if (availableCols.size === 0 || availableCols.has("author_name")) {
+          insertData["author_name"] = authorVal;
+        } else if (availableCols.has("author")) {
+          insertData["author"] = authorVal;
+        }
+
+        setCol("category_id", item.category_id || 2);
+        setCol("status", "draft");
+
+        // Fechas: status='draft' y published_at=null asegura 100% que NO se publica en la web pública
+        if (availableCols.size === 0 || availableCols.has("published_at")) {
+          insertData["published_at"] = null;
+        } else if (availableCols.has("publish_date")) {
+          insertData["publish_date"] = null;
+        }
+
+        if (availableCols.size === 0 || availableCols.has("created_at")) {
+          insertData["created_at"] = nowIso;
+        }
+        if (availableCols.size === 0 || availableCols.has("updated_at")) {
+          insertData["updated_at"] = nowIso;
+        }
+
+        const colNames = Object.keys(insertData);
+        const placeholders = colNames.map(() => "?").join(", ");
+        const values = colNames.map(k => insertData[k]);
+        const insertSql = `INSERT INTO articles (${colNames.join(", ")}) VALUES (${placeholders})`;
+
+        const result = await env.DB.prepare(insertSql).bind(...values).run();
 
         insertedArticles.push({
           id: result.meta?.last_row_id || result.lastRowId,
@@ -311,7 +383,8 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
   return {
     success: true,
     task: "linea_abierta_source_ingestion",
-    phase: "FASE 6.4 (Primera Etapa) — Ingesta de Fuentes Gratuitas y Almacenamiento en D1",
+    phase: "FASE 6.4 — Almacenamiento Real de Borradores en D1",
+    mode: dryRun ? "read_only_dry_run" : "real_storage",
     trigger_source: triggerSource,
     execution_time_ms: Date.now() - startTime,
     time_info: timeInfo,
@@ -322,7 +395,9 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
       candidates_detected: allCandidates.length,
       duplicates_skipped: allCandidates.length - freshCandidates.length,
       fresh_candidates_available: freshCandidates.length,
-      daily_quota_limit: 9,
+      daily_quota_limit: dailyQuotaLimit,
+      articles_created_today: todayArticlesCount,
+      remaining_daily_quota: remainingQuota,
       candidates_selected: selectedToStore.length,
       saved_in_d1: insertedArticles.length,
       failed_inserts: insertErrors.length
@@ -492,8 +567,11 @@ export default {
         });
       }
 
+      const force = url.searchParams.get("force") === "true" || url.searchParams.get("force") === "1";
+      const sourceTag = `http_auth:${request.method}:${auth.method}${force ? ":force" : ""}`;
+
       try {
-        const result = await runDailyScheduler(env, `http_auth:${request.method}:${auth.method}`, false);
+        const result = await runDailyScheduler(env, sourceTag, false);
         return new Response(JSON.stringify(result, null, 2), {
           status: 200,
           headers: {

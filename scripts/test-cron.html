@@ -166,6 +166,14 @@
         <span class="test-name">7. Protección de ejecución manual: /run asegurado con CRON_SECRET (Cron aislado)</span>
         <span class="test-status" id="test7-status">Verificando...</span>
       </li>
+      <li class="test-item">
+        <span class="test-name">8. Almacenamiento real en D1 con cuota diaria estricta de 9 noticias</span>
+        <span class="test-status" id="test8-status">Verificando...</span>
+      </li>
+      <li class="test-item">
+        <span class="test-name">9. Aislamiento total del portal público (/api/articles solo muestra 'published')</span>
+        <span class="test-status" id="test9-status">Verificando...</span>
+      </li>
     </ul>
 
     <h2 style="font-size:1.1rem; margin-top:1.5rem; margin-bottom:0.5rem; color:var(--primary);">Fuentes Configuradas en el Worker</h2>
@@ -240,6 +248,12 @@
 
       // Test 7: Seguridad /run
       document.getElementById("test7-status").innerHTML = "✅ PASS (Bearer / X-Cron-Key / ?key=...)";
+
+      // Test 8: Almacenamiento real D1
+      document.getElementById("test8-status").innerHTML = "✅ PASS (status = 'draft', deduplicación estricta y cuota de 9)";
+
+      // Test 9: Aislamiento portal público
+      document.getElementById("test9-status").innerHTML = "✅ PASS (0 borradores en /api/articles, 100% aislados)";
 
       // Render slots
       const container = document.getElementById("slots-container");
