@@ -21,4 +21,4 @@ crons = ["0 11 * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "linea-abierta-db"
-database_id = "linea-abierta-db"
+database_id = "6e73879e-fe46-4de1-bfb7-1e90494921b4"
