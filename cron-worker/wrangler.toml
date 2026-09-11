@@ -1,0 +1,24 @@
+# ==============================================================================
+# LINEA ABIERTA (lineaabierta.net.pe)
+# Configuración del Worker Dedicado para el Cron Diario
+# ==============================================================================
+
+name = "linea-abierta-cron"
+main = "index.js"
+compatibility_date = "2024-09-23"
+
+# ------------------------------------------------------------------------------
+# Desencadenador Programado (Cron Trigger)
+# 0 11 * * * = Todos los días a las 11:00 UTC = 06:00 a. m. hora de Perú (UTC-5)
+# ------------------------------------------------------------------------------
+[triggers]
+crons = ["0 11 * * *"]
+
+# ------------------------------------------------------------------------------
+# Enlace a la Base de Datos D1 Existente de Linea Abierta
+# Utiliza la misma base de datos "linea-abierta-db" que el proyecto Pages
+# ------------------------------------------------------------------------------
+[[d1_databases]]
+binding = "DB"
+database_name = "linea-abierta-db"
+database_id = "linea-abierta-db"
