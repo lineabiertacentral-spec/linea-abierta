@@ -39,6 +39,16 @@ npx wrangler deploy
 
 ---
 
-## 🧪 Pruebas y Verificación
-Puedes probar el funcionamiento del Worker en cualquier momento realizando una petición HTTP a su URL (o mediante `scripts/test-cron.js`):
-- `GET /status` — Devuelve el estado de conexión con D1, zona horaria de Perú y los 9 slots editoriales configurados.
+## 🧪 Endpoints para Pruebas y Diagnóstico
+Puedes probar el funcionamiento del Worker en cualquier momento realizando una petición HTTP a su URL:
+- `GET /status` — Estado del Worker, hora de Perú, métricas de D1 y proveedores configurados (dry-run).
+- `GET /sources` — Vista previa en vivo de las noticias detectadas desde RPP Noticias sin guardar en D1.
+- `GET /run` o `POST /run` — Ejecución activa manual del ciclo: lee fuentes, filtra duplicados, selecciona hasta un máximo de 9 noticias y las guarda en D1 como borrador (`status = 'draft'`).
+
+---
+
+## 📡 Fuentes Configuradas (FASE 6.4)
+- **RPP Noticias**: Activa (RSS público `https://rpp.pe/rss-titulares.xml` con fallback a `https://rpp.pe/rss`).
+- **MEF**: Preparada para siguiente etapa.
+- **BCRP**: Preparada para siguiente etapa.
+- **Congreso de la República**: Preparada para siguiente etapa.

@@ -7,10 +7,18 @@
  * Cron Trigger: "0 11 * * *" (Una vez al día a las 11:00 UTC = 06:00 a. m. Perú UTC-5)
  * Conexión: Base de datos Cloudflare D1 existente (linea-abierta-db) vía binding "DB".
  * 
- * FASE 6.3: Estructura del programador diario preparada para la orquestación
- * de 9 noticias editoriales. En esta fase NO se conecta Gemini ni APIs externas,
- * y NO se publica ningún artículo nuevo todavía (modo diagnóstico / dry-run).
+ * FASE 6.4 (Primera Etapa):
+ * Ingesta gratuita de fuentes informativas abiertas (RPP Noticias RSS y estructura
+ * extensible para MEF, BCRP y Congreso), detección de noticias nuevas y guardado
+ * seguro en D1 como borrador (status = 'draft', máximo 9 por día).
+ * Cero uso de Gemini, APIs de pago o imágenes en esta etapa.
  */
+
+import {
+  NEWS_PROVIDERS,
+  fetchAllActiveSources,
+  generateSlug
+} from "./sources/index.js";
 
 // Definición editorial de los 9 slots de noticias de Linea Abierta
 export const EDITORIAL_NEWS_SLOTS = [
@@ -19,81 +27,81 @@ export const EDITORIAL_NEWS_SLOTS = [
     role: "lead_story",
     placement: "Portada - Principal Destacada",
     category_slug: "politica",
+    category_id: 1,
     category_name: "Política",
-    description: "Acontecimiento político o institucional nacional de mayor relevancia del día.",
-    prompt_guideline: "Profundidad, rigurosidad institucional, enfoque plural y equilibrado sin sesgo partidario."
+    description: "Acontecimiento político o institucional nacional de mayor relevancia del día."
   },
   {
     slot: 2,
     role: "featured_sub1",
     placement: "Portada - Secundaria Destacada 1",
     category_slug: "economia",
+    category_id: 4,
     category_name: "Economía",
-    description: "Análisis económico nacional, tipo de cambio, mercados, inversión, agroexportación o minería.",
-    prompt_guideline: "Cifras oficiales (BCRP, MEF, INEI), impacto en bolsillos ciudadanos y empresas."
+    description: "Análisis económico nacional, tipo de cambio, mercados, inversión, agroexportación o minería."
   },
   {
     slot: 3,
     role: "featured_sub2",
     placement: "Portada - Secundaria Destacada 2",
     category_slug: "actualidad",
+    category_id: 2,
     category_name: "Actualidad",
-    description: "Noticia de alto interés ciudadano, infraestructura, transporte o servicios públicos.",
-    prompt_guideline: "Información útil, veraz y de servicio para la comunidad."
+    description: "Noticia de alto interés ciudadano, infraestructura, transporte o servicios públicos."
   },
   {
     slot: 4,
     role: "feed_story",
     placement: "Feed de Noticias - Regiones",
     category_slug: "regiones",
+    category_id: 3,
     category_name: "Regiones",
-    description: "Noticia del interior del país (Arequipa, Cusco, La Libertad, Piura, Junín, etc.).",
-    prompt_guideline: "Visión descentralizada, desarrollo regional, desafíos locales y proyectos."
+    description: "Noticia del interior del país (Arequipa, Cusco, La Libertad, Piura, Junín, etc.)."
   },
   {
     slot: 5,
     role: "feed_story",
     placement: "Feed de Noticias - Política",
     category_slug: "politica",
+    category_id: 1,
     category_name: "Política",
-    description: "Actividad legislativa del Congreso, reformas o agenda del Ejecutivo y Poder Judicial.",
-    prompt_guideline: "Seguimiento riguroso de proyectos de ley y decisiones estatales."
+    description: "Actividad legislativa del Congreso, reformas o agenda del Ejecutivo y Poder Judicial."
   },
   {
     slot: 6,
     role: "feed_story",
     placement: "Feed de Noticias - Economía",
     category_slug: "economia",
+    category_id: 4,
     category_name: "Economía",
-    description: "Comercio exterior, emprendimiento, empleo, mypes o innovación financiera en el Perú.",
-    prompt_guideline: "Datos verificables, análisis técnico accesible y tendencias productivas."
+    description: "Comercio exterior, emprendimiento, empleo, mypes o innovación financiera en el Perú."
   },
   {
     slot: 7,
     role: "feed_story",
     placement: "Feed de Noticias - Deportes",
     category_slug: "deportes",
+    category_id: 5,
     category_name: "Deportes",
-    description: "Fútbol profesional peruano (Liga 1), Selección Nacional de Fútbol o atletas polideportivos.",
-    prompt_guideline: "Crónica deportiva constructiva, rendimiento de atletas peruanos y calendario competitivo."
+    description: "Fútbol profesional peruano (Liga 1), Selección Nacional de Fútbol o atletas polideportivos."
   },
   {
     slot: 8,
     role: "feed_story",
     placement: "Feed de Noticias - Tendencias",
     category_slug: "tendencias",
+    category_id: 7,
     category_name: "Tendencias",
-    description: "Innovación científica, tecnología, cultura, medio ambiente o sociedad digital en Perú.",
-    prompt_guideline: "Avances tecnológicos, ciencia aplicada, patrimonio cultural y tendencias ciudadanas."
+    description: "Innovación científica, tecnología, cultura, medio ambiente o sociedad digital en Perú."
   },
   {
     slot: 9,
     role: "feed_story",
     placement: "Feed de Noticias - Opinión",
     category_slug: "opinion",
+    category_id: 6,
     category_name: "Opinión",
-    description: "Columna o análisis editorial de fondo sobre los retos contemporáneos del Perú.",
-    prompt_guideline: "Perspectiva analítica, balanceada y constructiva orientada al debate cívico alturado."
+    description: "Columna o análisis editorial de fondo sobre los retos contemporáneos del Perú."
   }
 ];
 
@@ -131,9 +139,54 @@ export function getPeruTimeInfo() {
 }
 
 /**
- * Ejecutor del ciclo diario de generación (FASE 6.3 - Modo Estructura / Diagnóstico)
+ * Selecciona y balancea hasta un máximo de 9 noticias candidatas para cubrir los slots editoriales.
  */
-export async function runDailyScheduler(env, triggerSource = "scheduled") {
+export function selectDailyNewsCandidates(candidates, existingSlugsSet, maxLimit = 9) {
+  const selected = [];
+  const seenSlugs = new Set(existingSlugsSet);
+
+  // Agrupar candidatos no duplicados por categoría
+  const byCategory = new Map();
+  for (const item of candidates) {
+    if (seenSlugs.has(item.slug)) continue;
+    seenSlugs.add(item.slug);
+
+    const catId = item.category_id || 2;
+    if (!byCategory.has(catId)) {
+      byCategory.set(catId, []);
+    }
+    byCategory.get(catId).push(item);
+  }
+
+  // 1. Ronda 1: Seleccionar al menos 1 noticia representativa de cada categoría detectada
+  const preferredCategoryOrder = [1, 4, 2, 3, 5, 7, 6]; // Política, Economía, Actualidad, Regiones, Deportes, Tendencias, Opinión
+  for (const catId of preferredCategoryOrder) {
+    if (selected.length >= maxLimit) break;
+    const catList = byCategory.get(catId);
+    if (catList && catList.length > 0) {
+      selected.push(catList.shift());
+    }
+  }
+
+  // 2. Ronda 2: Si aún no llegamos a 9, completar con las noticias restantes más recientes
+  for (const catId of preferredCategoryOrder) {
+    if (selected.length >= maxLimit) break;
+    const catList = byCategory.get(catId);
+    while (catList && catList.length > 0 && selected.length < maxLimit) {
+      selected.push(catList.shift());
+    }
+  }
+
+  return selected;
+}
+
+/**
+ * Ejecutor del ciclo diario de ingesta y guardado en D1 (FASE 6.4 - Primera Etapa).
+ * @param {object} env - Variables de entorno y bindings de Cloudflare Workers
+ * @param {string} triggerSource - Identificador de origen ('cron', 'http', etc.)
+ * @param {boolean} dryRun - Si es true, solo consulta fuentes sin guardar en D1
+ */
+export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun = false) {
   const startTime = Date.now();
   const timeInfo = getPeruTimeInfo();
 
@@ -143,15 +196,27 @@ export async function runDailyScheduler(env, triggerSource = "scheduled") {
     total_articles: 0
   };
 
-  // Verificar conexión con la base de datos D1 existente (si el binding está configurado)
+  const existingSlugsSet = new Set();
+  const existingTitlesSet = new Set();
+
+  // 1. Verificar conexión a D1 y obtener artículos existentes para evitar duplicados
   if (env && env.DB) {
     try {
       const articleCount = await env.DB.prepare("SELECT COUNT(*) AS total FROM articles").first();
       dbStatus = {
         connected: true,
-        message: "Conexión con Cloudflare D1 (linea-abierta-db) verificada con éxito.",
+        message: "Conexión con Cloudflare D1 (linea-abierta-db) activa.",
         total_articles: articleCount ? articleCount.total : 0
       };
+
+      // Cargar títulos y slugs recientes para deduplicación estricta
+      const recentRows = await env.DB.prepare("SELECT title, slug FROM articles ORDER BY id DESC LIMIT 300").all();
+      if (recentRows && Array.isArray(recentRows.results)) {
+        recentRows.results.forEach(r => {
+          if (r.slug) existingSlugsSet.add(r.slug);
+          if (r.title) existingTitlesSet.add(r.title.toLowerCase().trim());
+        });
+      }
     } catch (err) {
       dbStatus = {
         connected: false,
@@ -161,77 +226,196 @@ export async function runDailyScheduler(env, triggerSource = "scheduled") {
     }
   }
 
-  const executionLog = {
+  // 2. Ingesta de fuentes informativas gratuitas (RPP Noticias y estructura extensible)
+  const sourcesResult = await fetchAllActiveSources();
+  const allCandidates = sourcesResult.candidates || [];
+
+  // 3. Filtrar candidatos ya registrados en D1
+  const freshCandidates = allCandidates.filter(c => {
+    const isSlugDuplicate = existingSlugsSet.has(c.slug);
+    const isTitleDuplicate = existingTitlesSet.has(c.title.toLowerCase().trim());
+    return !isSlugDuplicate && !isTitleDuplicate;
+  });
+
+  // 4. Seleccionar hasta un máximo de 9 noticias balanceadas para el día
+  const selectedToStore = selectDailyNewsCandidates(freshCandidates, existingSlugsSet, 9);
+
+  const insertedArticles = [];
+  const insertErrors = [];
+
+  // 5. Guardar en D1 únicamente si la base de datos está disponible y no es dryRun
+  if (env && env.DB && !dryRun && selectedToStore.length > 0) {
+    const nowIso = timeInfo.utc_iso;
+
+    for (const item of selectedToStore) {
+      try {
+        // Garantizar slug único
+        let finalSlug = item.slug;
+        if (existingSlugsSet.has(finalSlug)) {
+          finalSlug = `${finalSlug}-${Date.now().toString(36)}`;
+        }
+        existingSlugsSet.add(finalSlug);
+
+        // Formatear contenido crudo preservando metadatos para la fase de procesamiento IA
+        const rawContentWithMeta = `<!-- FUENTE: ${item.source_name} | URL: ${item.source_url} | DETECTADO: ${nowIso} -->\n\n${item.raw_content}`;
+
+        const insertSql = `
+          INSERT INTO articles (
+            title,
+            slug,
+            summary,
+            content,
+            image_url,
+            author_name,
+            category_id,
+            status,
+            published_at,
+            created_at,
+            updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        // status = 'draft' y published_at = null garantiza 100% que NO se publica en la web pública
+        const result = await env.DB.prepare(insertSql).bind(
+          item.title,
+          finalSlug,
+          item.summary,
+          rawContentWithMeta,
+          item.image_url || "",
+          `${item.source_name} (Fuente Detectada)`,
+          item.category_id,
+          "draft",
+          null,
+          nowIso,
+          nowIso
+        ).run();
+
+        insertedArticles.push({
+          id: result.meta?.last_row_id || result.lastRowId,
+          title: item.title,
+          slug: finalSlug,
+          category_id: item.category_id,
+          category_name: item.category_name,
+          source_url: item.source_url,
+          status: "draft"
+        });
+      } catch (err) {
+        insertErrors.push({
+          title: item.title,
+          error: err.message
+        });
+      }
+    }
+  }
+
+  return {
     success: true,
-    task: "linea_abierta_daily_scheduler",
+    task: "linea_abierta_source_ingestion",
+    phase: "FASE 6.4 (Primera Etapa) — Ingesta de Fuentes Gratuitas y Almacenamiento en D1",
     trigger_source: triggerSource,
-    cron_target: "0 11 * * *",
-    cron_description: "06:00 a. m. hora de Perú (UTC-5) / 11:00 UTC",
-    phase: "FASE 6.3 — Estructura del Programador Diario",
     execution_time_ms: Date.now() - startTime,
     time_info: timeInfo,
+    dry_run: dryRun,
     d1_database: dbStatus,
-    plan: {
-      total_news_planned: EDITORIAL_NEWS_SLOTS.length,
-      mode: "dry_run",
-      notice: "Fase 6.3 completada. No se crearon ni publicaron noticias en D1. La estructura de los 9 slots está lista para la FASE 6.4.",
-      slots: EDITORIAL_NEWS_SLOTS
-    }
+    providers: NEWS_PROVIDERS,
+    ingest_metrics: {
+      candidates_detected: allCandidates.length,
+      duplicates_skipped: allCandidates.length - freshCandidates.length,
+      fresh_candidates_available: freshCandidates.length,
+      daily_quota_limit: 9,
+      candidates_selected: selectedToStore.length,
+      saved_in_d1: insertedArticles.length,
+      failed_inserts: insertErrors.length
+    },
+    saved_drafts: insertedArticles,
+    errors: insertErrors
   };
-
-  return executionLog;
 }
 
 export default {
   /**
    * Listener de eventos programados (Cron Trigger).
-   * Se ejecuta automáticamente según la expresión configurada en wrangler.toml:
-   * "0 11 * * *" (11:00 UTC = 06:00 a. m. Perú).
+   * Se ejecuta automáticamente a las 06:00 a. m. hora de Perú (11:00 UTC).
    */
   async scheduled(event, env, ctx) {
-    console.log(`[Cron Trigger Iniciado] Cron: ${event.cron} | Timestamp: ${new Date(event.scheduledTime).toISOString()}`);
+    console.log(`[Cron Trigger Iniciado] ${event.cron} | ${new Date(event.scheduledTime).toISOString()}`);
     
-    // ctx.waitUntil garantiza que el Worker no termine hasta completar las promesas
     ctx.waitUntil((async () => {
       try {
-        const result = await runDailyScheduler(env, `cron:${event.cron}`);
-        console.log(`[Cron Ejecución Exitosa] Resumen:`, JSON.stringify({
+        const result = await runDailyScheduler(env, `cron:${event.cron}`, false);
+        console.log(`[Cron Ingesta Exitosa] Resumen:`, JSON.stringify({
           time_peru: result.time_info.peru_time,
-          d1_status: result.d1_database.message,
-          total_articles_in_db: result.d1_database.total_articles,
-          slots_planned: result.plan.total_news_planned
+          candidatos_detectados: result.ingest_metrics.candidates_detected,
+          guardados_en_d1: result.ingest_metrics.saved_in_d1,
+          articulos: result.saved_drafts.map(a => a.title)
         }));
       } catch (err) {
-        console.error(`[Cron Error]:`, err);
+        console.error(`[Cron Ingesta Error]:`, err);
       }
     })());
   },
 
   /**
    * Listener HTTP (Fetch).
-   * Permite consultar el estado del Worker y probar la lógica bajo demanda
-   * desde cualquier navegador o terminal sin esperar a las 06:00 a. m.
+   * Permite probar la detección de fuentes e inserción bajo demanda.
    */
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    // Endpoint de prueba y diagnóstico del Cron
-    if (url.pathname === "/" || url.pathname === "/status" || url.pathname === "/run") {
+    // 1. Estado y diagnóstico general
+    if (url.pathname === "/" || url.pathname === "/status") {
       try {
-        const result = await runDailyScheduler(env, `http:${request.method}`);
+        const result = await runDailyScheduler(env, `http:${request.method}`, true); // dryRun = true para /status
         return new Response(JSON.stringify(result, null, 2), {
           status: 200,
           headers: {
             "Content-Type": "application/json; charset=utf-8",
             "Access-Control-Allow-Origin": "*",
-            "Cache-Control": "no-store, no-cache, must-revalidate"
+            "Cache-Control": "no-store"
           }
         });
       } catch (err) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: err.message
-        }, null, 2), {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json; charset=utf-8" }
+        });
+      }
+    }
+
+    // 2. Vista previa en vivo de las fuentes (sin tocar D1)
+    if (url.pathname === "/sources") {
+      try {
+        const sources = await fetchAllActiveSources();
+        return new Response(JSON.stringify(sources, null, 2), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-store"
+          }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json; charset=utf-8" }
+        });
+      }
+    }
+
+    // 3. Ejecución activa del proceso de ingesta (guarda borradores en D1)
+    if (url.pathname === "/run") {
+      try {
+        const result = await runDailyScheduler(env, `http:${request.method}`, false);
+        return new Response(JSON.stringify(result, null, 2), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-store"
+          }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
           status: 500,
           headers: { "Content-Type": "application/json; charset=utf-8" }
         });
@@ -240,8 +424,13 @@ export default {
 
     return new Response(JSON.stringify({
       error: "Ruta no encontrada.",
-      available_endpoints: ["/", "/status", "/run"]
-    }), {
+      endpoints_disponibles: [
+        { path: "/", description: "Diagnóstico general y estado (dry-run)" },
+        { path: "/status", description: "Estado y fuentes configuradas" },
+        { path: "/sources", description: "Vista previa en vivo del feed RPP sin guardar" },
+        { path: "/run", description: "Ejecutar ingesta activa y guardar borradores en D1" }
+      ]
+    }, null, 2), {
       status: 404,
       headers: { "Content-Type": "application/json; charset=utf-8" }
     });
