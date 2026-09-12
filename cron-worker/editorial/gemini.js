@@ -8,11 +8,11 @@
  * 1. Utiliza exclusivamente el nivel gratuito (Google AI Studio Free Tier).
  * 2. Cero costos: NO usa Google Search grounding ni herramientas de pago.
  * 3. La API Key se obtiene estrictamente de env.GEMINI_API_KEY (secreto del Worker).
- * 4. Modelo por defecto: gemini-2.5-flash con fallback a gemini-1.5-flash.
+ * 4. Modelo por defecto: gemini-2.5-flash con fallback a gemini-2.0-flash.
  */
 
 export const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
-export const FALLBACK_GEMINI_MODEL = "gemini-1.5-flash";
+export const FALLBACK_GEMINI_MODEL = "gemini-2.0-flash";
 
 /**
  * Prompt del sistema con directrices editoriales estrictas para Linea Abierta.
@@ -156,8 +156,9 @@ export async function generateEditorialArticle(rawArticle, env) {
   } catch (primaryErr) {
     console.warn(`[Gemini Editorial] Falló modelo ${preferredModel} (${primaryErr.message}). Intentando fallback a ${FALLBACK_GEMINI_MODEL}...`);
     
-    // Intento 2: Fallback (ej. gemini-1.5-flash)
+    // Intento 2: Fallback (ej. gemini-2.0-flash)
     try {
+      console.warn(`[EDITORIAL] Fallback al modelo de respaldo: ${FALLBACK_GEMINI_MODEL}`);
       const fallbackJson = await callGeminiApi(referenceText, apiKey.trim(), FALLBACK_GEMINI_MODEL);
       return {
         success: true,

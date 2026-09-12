@@ -5,7 +5,7 @@
  * ============================================================================
  * 
  * Verifica:
- * 1. Configuración de modelos gratuitos (gemini-2.5-flash y fallback gemini-1.5-flash).
+ * 1. Configuración de modelos gratuitos (gemini-2.5-flash y fallback gemini-2.0-flash).
  * 2. Cero costos y cero grounding de Google Search.
  * 3. Parser de metadatos de fuentes para trazabilidad interna.
  * 4. Limpieza de bloques de respuesta JSON de Gemini.
@@ -55,7 +55,7 @@ async function runGeminiEditorialTests() {
   // --------------------------------------------------------------------------
   console.log("--- 1. Configuración de Modelos Gratuitos (Zero Costos) ---");
   assert(DEFAULT_GEMINI_MODEL === "gemini-2.5-flash", `Modelo principal gratuito: ${DEFAULT_GEMINI_MODEL}`);
-  assert(FALLBACK_GEMINI_MODEL === "gemini-1.5-flash", `Modelo de respaldo gratuito: ${FALLBACK_GEMINI_MODEL}`);
+  assert(FALLBACK_GEMINI_MODEL === "gemini-2.0-flash", `Modelo de respaldo gratuito: ${FALLBACK_GEMINI_MODEL}`);
 
   // Verificar que el prompt prohíba alucinaciones y plagio
   assert(EDITORIAL_SYSTEM_PROMPT.includes("REDACCIÓN 100% ORIGINAL"), "Prompt exige redacción 100% original");
