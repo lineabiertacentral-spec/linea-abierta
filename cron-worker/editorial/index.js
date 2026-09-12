@@ -51,11 +51,23 @@ export async function getPendingEditorialDrafts(db, limit = 1, specificId = null
       return row ? [row] : [];
     }
 
+    const availableCols = await getArticleTableColumns(db);
+
+    // En el D1 de Linea Abierta la columna de autoría es 'author' (no 'author_name')
+    const authorCol = (availableCols.has("author") || !availableCols.has("author_name"))
+      ? "author"
+      : "author_name";
+
+    // Columna de contenido ('content' o 'body')
+    const contentCol = (availableCols.has("body") && !availableCols.has("content"))
+      ? "body"
+      : "content";
+
     // Buscar borradores que contengan autoría de fuente detectada o que no hayan sido redactados
     const sql = `
       SELECT * FROM articles 
       WHERE status = 'draft' 
-        AND (author_name LIKE '%Fuente Detectada%' OR content NOT LIKE '%REDACTADO_EDITORIAL%')
+        AND (${authorCol} LIKE '%Fuente Detectada%' OR ${contentCol} IS NULL OR ${contentCol} NOT LIKE '%REDACTADO_EDITORIAL%')
       ORDER BY id ASC 
       LIMIT ?
     `;
@@ -155,10 +167,12 @@ export async function processSingleDraft(article, env) {
     updateFields["body"] = finalContent;
   }
 
-  // Autoría oficial de redacción
-  if (availableCols.size === 0 || availableCols.has("author_name")) {
+  // Autoría oficial de redacción (la columna real en D1 es 'author')
+  if (availableCols.has("author")) {
+    updateFields["author"] = "Redacción Linea Abierta";
+  } else if (availableCols.has("author_name")) {
     updateFields["author_name"] = "Redacción Linea Abierta";
-  } else if (availableCols.has("author")) {
+  } else {
     updateFields["author"] = "Redacción Linea Abierta";
   }
 

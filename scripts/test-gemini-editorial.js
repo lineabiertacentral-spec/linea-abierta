@@ -96,7 +96,7 @@ async function runGeminiEditorialTests() {
       slug: "prueba-de-publicacion-linea-abierta",
       summary: "Noticia publicada de prueba",
       content: "Contenido publicado",
-      author_name: "admin",
+      author: "admin",
       category_id: 2,
       status: "published",
       published_at: "2026-09-10T20:16:27.472Z",
@@ -109,7 +109,7 @@ async function runGeminiEditorialTests() {
       slug: "mef-proyecta-crecimiento-de-3-2-para-la-economia-peruana-en-2026",
       summary: "El titular del Ministerio de Economía señaló que la inversión privada liderará el repunte.",
       content: `<!-- FUENTE: RPP Noticias | URL: https://rpp.pe/economia/mef-crecimiento-2026 | DETECTADO: 2026-09-11T05:30:00.000Z -->\n\nEl Ministerio de Economía y Finanzas estimó este viernes que el Producto Bruto Interno del Perú se expandirá a un ritmo de 3.2% al cierre del año, impulsado por la recuperación del consumo interno y la ejecución de proyectos de infraestructura minera.`,
-      author_name: "RPP Noticias (Fuente Detectada)",
+      author: "RPP Noticias (Fuente Detectada)",
       category_id: 4,
       status: "draft",
       published_at: null,
@@ -122,7 +122,7 @@ async function runGeminiEditorialTests() {
       slug: "seleccion-peruana-inicio-entrenamientos-con-miras-a-nueva-fecha-doble",
       summary: "Los dirigidos por el comando técnico completaron su primera sesión en la Videna.",
       content: `<!-- FUENTE: RPP Noticias | URL: https://rpp.pe/deportes/seleccion-videna | DETECTADO: 2026-09-11T05:35:00.000Z -->\n\nEl plantel nacional completó su primer turno de prácticas de cara a los cotejos de eliminatorias.`,
-      author_name: "RPP Noticias (Fuente Detectada)",
+      author: "RPP Noticias (Fuente Detectada)",
       category_id: 5,
       status: "draft",
       published_at: null,
@@ -155,7 +155,7 @@ async function runGeminiEditorialTests() {
         return {
           bind: (limit) => ({
             all: async () => {
-              const matches = d1Articles.filter(a => a.status === "draft" && a.author_name.includes("Fuente Detectada"));
+              const matches = d1Articles.filter(a => a.status === "draft" && ((a.author && a.author.includes("Fuente Detectada")) || (a.author_name && a.author_name.includes("Fuente Detectada"))));
               return { results: matches.slice(0, limit) };
             }
           })
@@ -276,8 +276,9 @@ async function runGeminiEditorialTests() {
     "Resumen / bajada reemplazada con redacción periodística");
   assert(processedDraft.content.includes("El titular del Ministerio de Economía"), 
     "Cuerpo reemplazado con nueva redacción estructurada");
-  assert(processedDraft.author_name === "Redacción Linea Abierta", 
-    `Autoría actualizada a "${processedDraft.author_name}"`);
+  const updatedAuthor = processedDraft.author || processedDraft.author_name;
+  assert(updatedAuthor === "Redacción Linea Abierta", 
+    `Autoría actualizada a "${updatedAuthor}" (columna real en D1: 'author')`);
   assert(processedDraft.slug === "economia-peruana-alcanzaria-expansion-de-32-impulsada-por-inversion-privada-este-ano", 
     `Slug regenerado acorde al nuevo titular: /${processedDraft.slug}`);
 
@@ -294,7 +295,8 @@ async function runGeminiEditorialTests() {
   assert(processedDraft.published_at === null, "GARANTÍA: published_at = NULL (NUNCA publicado)");
 
   // D. Borrador no procesado (#3) permanece intacto
-  assert(untouchedDraft.author_name === "RPP Noticias (Fuente Detectada)", 
+  const untouchedAuthor = untouchedDraft.author || untouchedDraft.author_name;
+  assert(untouchedAuthor === "RPP Noticias (Fuente Detectada)", 
     "Borrador ID 3 permanece intacto y en cola para siguiente ejecución");
 
   // --------------------------------------------------------------------------
