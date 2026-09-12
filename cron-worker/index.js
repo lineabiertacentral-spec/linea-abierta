@@ -20,6 +20,15 @@ import {
   generateSlug
 } from "./sources/index.js";
 
+import {
+  processEditorialDrafts
+} from "./editorial/index.js";
+
+import {
+  DEFAULT_GEMINI_MODEL,
+  FALLBACK_GEMINI_MODEL
+} from "./editorial/gemini.js";
+
 // Definición editorial de los 9 slots de noticias de Linea Abierta
 export const EDITORIAL_NEWS_SLOTS = [
   {
@@ -404,6 +413,16 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
     },
     saved_drafts: insertedArticles,
     errors: insertErrors,
+    editorial_ai: {
+      provider: "Google Gemini",
+      tier: "free_tier (Google AI Studio)",
+      billing_active: false,
+      google_search_grounding: false,
+      nano_banana: false,
+      model_primary: env?.GEMINI_MODEL || DEFAULT_GEMINI_MODEL,
+      model_fallback: FALLBACK_GEMINI_MODEL,
+      api_key_configured: Boolean(env && (env.GEMINI_API_KEY || env.GOOGLE_API_KEY))
+    },
     security: {
       manual_execution_endpoint: "/run",
       manual_execution_protected: true,
@@ -495,6 +514,14 @@ export default {
           guardados_en_d1: result.ingest_metrics.saved_in_d1,
           articulos: result.saved_drafts.map(a => a.title)
         }));
+        // FASE 6.5: Procesar redacción editorial con Gemini si la API key está configurada
+        if (env && (env.GEMINI_API_KEY || env.GOOGLE_API_KEY)) {
+          const editorialRes = await processEditorialDrafts(env, { limit: 9 });
+          console.log(`[Cron Redacción Editorial] Resumen:`, JSON.stringify({
+            procesados: editorialRes.processed_count,
+            omitidos: editorialRes.skipped_count
+          }));
+        }
       } catch (err) {
         console.error(`[Cron Ingesta Error]:`, err);
       }
@@ -503,7 +530,8 @@ export default {
 
   /**
    * Listener HTTP (Fetch).
-   * Proporciona diagnóstico seguro (/status) y ejecución manual protegida (/run).
+   * Proporciona diagnóstico seguro (/status), ejecución manual protegida (/run)
+   * y redacción editorial con Gemini (/rewrite).
    */
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -588,13 +616,54 @@ export default {
       }
     }
 
+    // 4. Redacción editorial manual con Gemini API (PROTEGIDO CON CLAVE SECRETA)
+    if (url.pathname === "/rewrite" || url.pathname === "/editorial/rewrite") {
+      const auth = checkManualExecutionAuth(request, env);
+
+      if (!auth.authorized) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: "Acceso no autorizado al endpoint de redacción editorial (/rewrite).",
+          reason: auth.reason,
+          help: "Configura la variable secreta CRON_SECRET en Cloudflare Workers y envía la clave en Authorization (Bearer), X-Cron-Key o parámetro ?key=..."
+        }, null, 2), {
+          status: 401,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "WWW-Authenticate": "Bearer realm='linea-abierta-cron'"
+          }
+        });
+      }
+
+      const limit = parseInt(url.searchParams.get("limit") || "1", 10);
+      const articleId = url.searchParams.get("id");
+
+      try {
+        const result = await processEditorialDrafts(env, { limit, articleId });
+        return new Response(JSON.stringify(result, null, 2), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-store"
+          }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json; charset=utf-8" }
+        });
+      }
+    }
+
     return new Response(JSON.stringify({
       error: "Ruta no encontrada.",
       endpoints_disponibles: [
         { path: "/", description: "Diagnóstico general seguro (dry-run, lectura segura)" },
         { path: "/status", description: "Estado, hora de Perú y fuentes configuradas" },
         { path: "/sources", description: "Vista previa en vivo del feed RPP (solo lectura)" },
-        { path: "/run", description: "Ejecutar ingesta activa y guardar borradores en D1 (PROTEGIDO con CRON_SECRET)" }
+        { path: "/run", description: "Ejecutar ingesta activa y guardar borradores en D1 (PROTEGIDO con CRON_SECRET)" },
+        { path: "/rewrite", description: "Redactar versiones originales con Gemini API (PROTEGIDO con CRON_SECRET, ?limit=1)" }
       ]
     }, null, 2), {
       status: 404,
