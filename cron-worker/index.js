@@ -225,6 +225,11 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
   const existingTitlesSet = new Set();
 
   let todayArticlesCount = 0;
+  let editorialQueueInfo = {
+    pending_count: 0,
+    processed_count: 0,
+    next_pending_draft: null
+  };
 
   // 1. Verificar conexión a D1 y obtener artículos existentes para evitar duplicados
   if (env && env.DB) {
@@ -254,6 +259,38 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
           if (r.slug) existingSlugsSet.add(r.slug);
           if (r.title) existingTitlesSet.add(r.title.toLowerCase().trim());
         });
+      }
+
+      // Diagnóstico editorial de la cola de borradores en D1
+      try {
+        const availableCols = await getArticleTableColumns(env.DB);
+        const authorCol = (availableCols.has("author") || !availableCols.has("author_name")) ? "author" : "author_name";
+        const contentCol = (availableCols.has("body") && !availableCols.has("content")) ? "body" : "content";
+
+        const pRow = await env.DB.prepare(
+          `SELECT COUNT(*) AS total FROM articles WHERE status = 'draft' AND (${authorCol} LIKE '%Fuente Detectada%' OR ${contentCol} IS NULL OR ${contentCol} NOT LIKE '%REDACTADO_EDITORIAL%')`
+        ).first();
+        editorialQueueInfo.pending_count = pRow ? Number(pRow.total || 0) : 0;
+
+        const nextRow = await env.DB.prepare(
+          `SELECT id, title, ${authorCol} AS author, status, published_at FROM articles WHERE status = 'draft' AND (${authorCol} LIKE '%Fuente Detectada%' OR ${contentCol} IS NULL OR ${contentCol} NOT LIKE '%REDACTADO_EDITORIAL%') ORDER BY id ASC LIMIT 1`
+        ).first();
+        if (nextRow) {
+          editorialQueueInfo.next_pending_draft = {
+            id: nextRow.id,
+            title: nextRow.title,
+            author: nextRow.author,
+            status: nextRow.status,
+            published_at: nextRow.published_at
+          };
+        }
+
+        const prRow = await env.DB.prepare(
+          `SELECT COUNT(*) AS total FROM articles WHERE status = 'draft' AND ${contentCol} LIKE '%REDACTADO_EDITORIAL%'`
+        ).first();
+        editorialQueueInfo.processed_count = prRow ? Number(prRow.total || 0) : 0;
+      } catch {
+        // En caso de que la tabla aún no exista o no tenga las columnas
       }
     } catch (err) {
       dbStatus = {
@@ -421,7 +458,8 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
       nano_banana: false,
       model_primary: env?.GEMINI_MODEL || DEFAULT_GEMINI_MODEL,
       model_fallback: FALLBACK_GEMINI_MODEL,
-      api_key_configured: Boolean(env && (env.GEMINI_API_KEY || env.GOOGLE_API_KEY))
+      api_key_configured: Boolean(env && (env.GEMINI_API_KEY || env.GOOGLE_API_KEY)),
+      queue_status: editorialQueueInfo
     },
     security: {
       manual_execution_endpoint: "/run",

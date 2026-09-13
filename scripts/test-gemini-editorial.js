@@ -99,6 +99,7 @@ async function runGeminiEditorialTests() {
       slug: "prueba-de-publicacion-linea-abierta",
       summary: "Noticia publicada de prueba",
       content: "Contenido publicado",
+      image_url: "https://lineaabierta.net.pe/img/portada-test.jpg",
       author: "admin",
       category_id: 2,
       status: "published",
@@ -112,6 +113,7 @@ async function runGeminiEditorialTests() {
       slug: "mef-proyecta-crecimiento-de-3-2-para-la-economia-peruana-en-2026",
       summary: "El titular del Ministerio de Economía señaló que la inversión privada liderará el repunte.",
       content: `<!-- FUENTE: RPP Noticias | URL: https://rpp.pe/economia/mef-crecimiento-2026 | DETECTADO: 2026-09-11T05:30:00.000Z -->\n\nEl Ministerio de Economía y Finanzas estimó este viernes que el Producto Bruto Interno del Perú se expandirá a un ritmo de 3.2% al cierre del año, impulsado por la recuperación del consumo interno y la ejecución de proyectos de infraestructura minera.`,
+      image_url: "https://e.rpp-noticias.io/normal/2026/09/11/mef-foto-rpp.jpg",
       author: "RPP Noticias (Fuente Detectada)",
       category_id: 4,
       status: "draft",
@@ -125,6 +127,7 @@ async function runGeminiEditorialTests() {
       slug: "seleccion-peruana-inicio-entrenamientos-con-miras-a-nueva-fecha-doble",
       summary: "Los dirigidos por el comando técnico completaron su primera sesión en la Videna.",
       content: `<!-- FUENTE: RPP Noticias | URL: https://rpp.pe/deportes/seleccion-videna | DETECTADO: 2026-09-11T05:35:00.000Z -->\n\nEl plantel nacional completó su primer turno de prácticas de cara a los cotejos de eliminatorias.`,
+      image_url: "https://e.rpp-noticias.io/normal/2026/09/11/seleccion-videna.jpg",
       author: "RPP Noticias (Fuente Detectada)",
       category_id: 5,
       status: "draft",
@@ -146,7 +149,7 @@ async function runGeminiEditorialTests() {
         };
       }
 
-      if (trimmed.includes("SELECT * FROM articles WHERE id = ?")) {
+      if (trimmed.includes("SELECT") && trimmed.includes("FROM articles WHERE id = ?")) {
         return {
           bind: (id) => ({
             first: async () => d1Articles.find(a => a.id === Number(id)) || null
@@ -293,9 +296,19 @@ async function runGeminiEditorialTests() {
   assert(processedDraft.content.includes("MODELO: gemini-3.5-flash-lite"), 
     "Modelo utilizado registrado para auditoría interna");
 
-  // C. Garantías inalterables de seguridad
+  // C. Garantías inalterables de seguridad y cumplimiento de Fase 6.2 (Sin imágenes ajenas)
   assert(processedDraft.status === "draft", "GARANTÍA: status = 'draft' (NUNCA 'published')");
   assert(processedDraft.published_at === null, "GARANTÍA: published_at = NULL (NUNCA publicado)");
+  assert(processedDraft.image_url === "", "GARANTÍA: image_url limpiado a '' (no reutilizar imágenes de RPP sin licencia)");
+
+  // Comparación before vs after retornada por processEditorialDrafts
+  const resDetail = processResult.results[0];
+  assert(resDetail.before && resDetail.after, "Resultado incluye bloques estructurados 'before' y 'after'");
+  assert(resDetail.before.id === 2 && resDetail.after.id === 2, "El UPDATE se ejecutó sobre el mismo ID (2)");
+  assert(resDetail.before.author === "RPP Noticias (Fuente Detectada)", "Before: autor original de fuente detectada");
+  assert(resDetail.after.author === "Redacción Linea Abierta", "After: autor actualizado a 'Redacción Linea Abierta'");
+  assert(resDetail.before.image_url === "https://e.rpp-noticias.io/normal/2026/09/11/mef-foto-rpp.jpg", "Before: contenía imagen externa de RPP");
+  assert(resDetail.after.image_url === "", "After: image_url vaciado exitosamente en D1");
 
   // D. Borrador no procesado (#3) permanece intacto
   const untouchedAuthor = untouchedDraft.author || untouchedDraft.author_name;

@@ -25,7 +25,7 @@ export function parseSourceMetadata(content) {
 
   if (!content || typeof content !== "string") return result;
 
-  const metaMatch = content.match(/<!--\s*FUENTE:\s*([^|]+?)\s*\|\s*URL:\s*([^|]+?)\s*\|\s*DETECTADO:\s*([^>]+?)\s*-->/);
+  const metaMatch = content.match(/<!--\s*FUENTE:\s*([^|]+?)\s*\|\s*URL:\s*([^|]+?)\s*\|\s*(?:DETECTADO|REDACTADO_EDITORIAL):\s*([^>]+?)\s*-->/);
   if (metaMatch) {
     result.source_name = metaMatch[1].trim();
     result.source_url = metaMatch[2].trim();
@@ -84,13 +84,26 @@ export async function getPendingEditorialDrafts(db, limit = 1, specificId = null
  * Mantiene estrictamente status = 'draft' y published_at = null.
  */
 export async function processSingleDraft(article, env) {
-  const meta = parseSourceMetadata(article.content);
+  const rawContent = article.content || article.body || "";
+  const rawSummary = article.summary || article.lead || article.excerpt || "";
+  const meta = parseSourceMetadata(rawContent);
   const nowIso = new Date().toISOString();
+
+  // Capturar snapshot inmutable del estado antes de la actualización en base de datos
+  const beforeState = {
+    id: article.id,
+    title: article.title,
+    summary: rawSummary,
+    author: article.author || article.author_name || "",
+    image_url: article.image_url || article.cover_image || article.image || "",
+    status: article.status,
+    published_at: article.published_at
+  };
 
   // 1. Invocar Gemini API con directrices editoriales y anti-alucinación
   const rewriteResult = await generateEditorialArticle({
     title: article.title,
-    summary: article.summary,
+    summary: rawSummary,
     raw_content: meta.clean_content,
     category_name: article.category_name || "Actualidad"
   }, env);
@@ -136,8 +149,8 @@ export async function processSingleDraft(article, env) {
   }
 
   // 4. Formatear contenido final preservando trazabilidad interna con encabezado HTML oculto
-  const sourceName = meta.source_name || "Fuente Abierta";
-  const sourceUrl = meta.source_url || "";
+  const sourceName = meta.source_name || article.source_name || "RPP Noticias";
+  const sourceUrl = meta.source_url || article.source_url || "";
   const finalContent = `<!-- FUENTE: ${sourceName} | URL: ${sourceUrl} | REDACTADO_EDITORIAL: ${nowIso} | MODELO: ${rewriteResult.model_used} -->\n\n${editorialData.content.trim()}`;
 
   // 5. Actualizar en D1 respetando columnas dinámicas y manteniendo status='draft' y published_at=null
@@ -158,6 +171,8 @@ export async function processSingleDraft(article, env) {
     updateFields["summary"] = editorialData.summary.trim();
   } else if (availableCols.has("lead")) {
     updateFields["lead"] = editorialData.summary.trim();
+  } else if (availableCols.has("excerpt")) {
+    updateFields["excerpt"] = editorialData.summary.trim();
   }
 
   // Contenido
@@ -176,6 +191,15 @@ export async function processSingleDraft(article, env) {
     updateFields["author"] = "Redacción Linea Abierta";
   }
 
+  // Limpiar imagen de la fuente externa para cumplir la regla de Fase 6.2 (no usar imágenes ajenas sin licencia)
+  if (availableCols.size === 0 || availableCols.has("image_url")) {
+    updateFields["image_url"] = "";
+  } else if (availableCols.has("cover_image")) {
+    updateFields["cover_image"] = "";
+  } else if (availableCols.has("image")) {
+    updateFields["image"] = "";
+  }
+
   // Garantías inalterables de seguridad: SIEMPRE borrador, NUNCA publicado
   if (availableCols.size === 0 || availableCols.has("status")) {
     updateFields["status"] = "draft";
@@ -192,20 +216,43 @@ export async function processSingleDraft(article, env) {
   const values = [...Object.values(updateFields), article.id];
   const updateSql = `UPDATE articles SET ${setClauses} WHERE id = ?`;
 
-  await env.DB.prepare(updateSql).bind(...values).run();
+  const d1UpdateRes = await env.DB.prepare(updateSql).bind(...values).run();
+
+  // Verificación directa en D1 para confirmar que los cambios quedaron efectivamente guardados
+  let verifiedRow = null;
+  try {
+    verifiedRow = await env.DB.prepare(
+      "SELECT id, title, slug, summary, author, image_url, status, published_at, updated_at FROM articles WHERE id = ?"
+    ).bind(article.id).first();
+  } catch (err) {
+    console.warn(`[Editorial UPDATE] No se pudo verificar fila ${article.id}:`, err?.message);
+  }
 
   return {
     id: article.id,
     success: true,
     model_used: rewriteResult.model_used,
     source_url: sourceUrl,
+    before: beforeState,
+    after: {
+      id: verifiedRow?.id ?? article.id,
+      title: verifiedRow?.title ?? editorialData.title.trim(),
+      slug: verifiedRow?.slug ?? finalSlug,
+      summary: verifiedRow?.summary ?? editorialData.summary.trim(),
+      author: verifiedRow?.author ?? "Redacción Linea Abierta",
+      image_url: verifiedRow?.image_url ?? "",
+      status: verifiedRow?.status ?? "draft",
+      published_at: verifiedRow?.published_at ?? null,
+      updated_at: verifiedRow?.updated_at ?? nowIso
+    },
     old_title: article.title,
     new_title: editorialData.title.trim(),
     new_slug: finalSlug,
     summary: editorialData.summary.trim(),
     word_count: editorialData.content.trim().split(/\s+/).length,
     status: "draft",
-    published_at: null
+    published_at: null,
+    d1_changes: d1UpdateRes?.meta?.changes ?? 1
   };
 }
 
