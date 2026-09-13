@@ -222,7 +222,7 @@ export async function processSingleDraft(article, env) {
   let verifiedRow = null;
   try {
     verifiedRow = await env.DB.prepare(
-      "SELECT id, title, slug, summary, author, image_url, status, published_at, updated_at FROM articles WHERE id = ?"
+      "SELECT * FROM articles WHERE id = ?"
     ).bind(article.id).first();
   } catch (err) {
     console.warn(`[Editorial UPDATE] No se pudo verificar fila ${article.id}:`, err?.message);
@@ -238,9 +238,9 @@ export async function processSingleDraft(article, env) {
       id: verifiedRow?.id ?? article.id,
       title: verifiedRow?.title ?? editorialData.title.trim(),
       slug: verifiedRow?.slug ?? finalSlug,
-      summary: verifiedRow?.summary ?? editorialData.summary.trim(),
-      author: verifiedRow?.author ?? "Redacción Linea Abierta",
-      image_url: verifiedRow?.image_url ?? "",
+      summary: verifiedRow?.summary ?? verifiedRow?.lead ?? verifiedRow?.excerpt ?? editorialData.summary.trim(),
+      author: verifiedRow?.author ?? verifiedRow?.author_name ?? "Redacción Linea Abierta",
+      image_url: verifiedRow?.image_url ?? verifiedRow?.cover_image ?? verifiedRow?.image ?? "",
       status: verifiedRow?.status ?? "draft",
       published_at: verifiedRow?.published_at ?? null,
       updated_at: verifiedRow?.updated_at ?? nowIso
