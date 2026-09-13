@@ -39,11 +39,21 @@ export function parseSourceMetadata(content) {
 
 /**
  * Consulta en D1 los borradores que aún no han sido procesados editorialmente.
+ * Soporta limit, specificId o un array explícito de articleIds.
  */
-export async function getPendingEditorialDrafts(db, limit = 1, specificId = null) {
+export async function getPendingEditorialDrafts(db, limit = 1, specificId = null, articleIds = null) {
   if (!db) return [];
 
   try {
+    if (Array.isArray(articleIds) && articleIds.length > 0) {
+      const validIds = articleIds.map(id => parseInt(id, 10)).filter(id => !isNaN(id) && id > 0);
+      if (validIds.length === 0) return [];
+      const placeholders = validIds.map(() => "?").join(", ");
+      const sql = `SELECT * FROM articles WHERE id IN (${placeholders}) AND status = 'draft' ORDER BY id ASC`;
+      const { results } = await db.prepare(sql).bind(...validIds).all();
+      return Array.isArray(results) ? results : [];
+    }
+
     if (specificId) {
       const row = await db.prepare(
         "SELECT * FROM articles WHERE id = ? AND status = 'draft'"
@@ -258,13 +268,15 @@ export async function processSingleDraft(article, env) {
 
 /**
  * Procesa un lote de borradores (por defecto 1 para pruebas controladas, o más).
+ * Soporta options: { limit = 1, articleId = null, articleIds = null }
  * 
  * @param {object} env - Variables de entorno y bindings de Cloudflare Workers
- * @param {object} options - { limit = 1, articleId = null }
+ * @param {object} options - { limit = 1, articleId = null, articleIds = null }
  */
 export async function processEditorialDrafts(env, options = {}) {
   const limit = Math.max(1, Math.min(9, parseInt(options.limit || 1, 10)));
   const specificId = options.articleId ? parseInt(options.articleId, 10) : null;
+  const articleIds = Array.isArray(options.articleIds) ? options.articleIds : null;
 
   if (!env || !env.DB) {
     return {
@@ -273,7 +285,7 @@ export async function processEditorialDrafts(env, options = {}) {
     };
   }
 
-  const drafts = await getPendingEditorialDrafts(env.DB, limit, specificId);
+  const drafts = await getPendingEditorialDrafts(env.DB, limit, specificId, articleIds);
 
   if (drafts.length === 0) {
     return {
@@ -286,14 +298,22 @@ export async function processEditorialDrafts(env, options = {}) {
   }
 
   const results = [];
-  for (const draft of drafts) {
+  for (let i = 0; i < drafts.length; i++) {
+    const draft = drafts[i];
     try {
+      // Pausa breve entre peticiones (400ms) si hay más de 1 artículo para respetar el rate limit de Free Tier (15 RPM)
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, 400));
+      }
       const res = await processSingleDraft(draft, env);
       results.push(res);
     } catch (err) {
+      console.error(`[Editorial Engine] Fallo al procesar borrador ${draft.id}:`, err?.message || err);
       results.push({
         id: draft.id,
         success: false,
+        skipped: true,
+        reason: `Excepción durante procesamiento: ${err.message}`,
         error: err.message
       });
     }
@@ -305,7 +325,7 @@ export async function processEditorialDrafts(env, options = {}) {
   return {
     success: true,
     task: "editorial_gemini_rewrite",
-    phase: "FASE 6.5 — Redacción Editorial Gratuita con Gemini API",
+    phase: "FASE 6.6 — Redacción Editorial Automatizada con Gemini API",
     processed_count: processedCount,
     skipped_count: skippedCount,
     results

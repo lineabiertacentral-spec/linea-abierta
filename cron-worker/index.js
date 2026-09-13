@@ -206,12 +206,13 @@ export async function getArticleTableColumns(db) {
 }
 
 /**
- * Ejecutor del ciclo diario de ingesta y guardado en D1 (FASE 6.4 - Almacenamiento Real).
+ * Ejecutor del ciclo diario de ingesta y guardado en D1 con redacción editorial (FASE 6.6).
  * @param {object} env - Variables de entorno y bindings de Cloudflare Workers
  * @param {string} triggerSource - Identificador de origen ('cron', 'http', etc.)
- * @param {boolean} dryRun - Si es true, solo consulta fuentes sin guardar en D1
+ * @param {boolean} dryRun - Si es true, solo consulta fuentes sin guardar en D1 ni llamar a Gemini
+ * @param {number|null} customLimit - Límite personalizado de noticias nuevas a procesar (para pruebas controladas)
  */
-export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun = false) {
+export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun = false, customLimit = null) {
   const startTime = Date.now();
   const timeInfo = getPeruTimeInfo();
 
@@ -314,7 +315,10 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
 
   const dailyQuotaLimit = 9;
   const isForced = typeof triggerSource === "string" && triggerSource.includes("force");
-  const remainingQuota = isForced ? dailyQuotaLimit : Math.max(0, dailyQuotaLimit - todayArticlesCount);
+  let remainingQuota = isForced ? dailyQuotaLimit : Math.max(0, dailyQuotaLimit - todayArticlesCount);
+  if (customLimit !== null && !isNaN(customLimit) && Number(customLimit) > 0) {
+    remainingQuota = Math.min(remainingQuota, Number(customLimit));
+  }
 
   // 4. Seleccionar hasta un máximo de 9 noticias balanceadas para el día (respetando cuota restante)
   const selectedToStore = remainingQuota > 0
@@ -426,11 +430,37 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
     }
   }
 
+  // 6. FASE 6.6: Redacción Editorial Automatizada con Gemini API sobre las nuevas noticias ingresadas
+  let editorialBatchResult = null;
+  const hasGeminiKey = Boolean(env && (env.GEMINI_API_KEY || env.GOOGLE_API_KEY));
+
+  if (!dryRun && insertedArticles.length > 0 && hasGeminiKey) {
+    try {
+      const newArticleIds = insertedArticles.map(a => a.id).filter(id => Boolean(id));
+      if (newArticleIds.length > 0) {
+        console.log(`[Cron Pipeline FASE 6.6] Iniciando redacción editorial automática para ${newArticleIds.length} noticias nuevas (IDs: ${newArticleIds.join(", ")})...`);
+        editorialBatchResult = await processEditorialDrafts(env, {
+          articleIds: newArticleIds,
+          limit: newArticleIds.length
+        });
+      }
+    } catch (edErr) {
+      console.error("[Cron Pipeline FASE 6.6] Error en lote editorial:", edErr?.message || edErr);
+      editorialBatchResult = {
+        success: false,
+        error: edErr.message,
+        processed_count: 0,
+        skipped_count: insertedArticles.length,
+        results: []
+      };
+    }
+  }
+
   return {
     success: true,
-    task: "linea_abierta_source_ingestion",
-    phase: "FASE 6.4 — Almacenamiento Real de Borradores en D1",
-    mode: dryRun ? "read_only_dry_run" : "real_storage",
+    task: "linea_abierta_daily_pipeline",
+    phase: "FASE 6.6 — Automatización de Ingesta y Redacción Editorial Diaria",
+    mode: dryRun ? "read_only_dry_run" : "real_pipeline",
     trigger_source: triggerSource,
     execution_time_ms: Date.now() - startTime,
     time_info: timeInfo,
@@ -450,6 +480,22 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
     },
     saved_drafts: insertedArticles,
     errors: insertErrors,
+    editorial_pipeline: editorialBatchResult ? {
+      executed: true,
+      new_articles_count: insertedArticles.length,
+      processed_by_gemini: editorialBatchResult.processed_count,
+      skipped_or_failed: editorialBatchResult.skipped_count,
+      all_remain_draft: true,
+      none_published: true,
+      results: editorialBatchResult.results
+    } : {
+      executed: false,
+      reason: dryRun
+        ? "dry_run: modo de solo lectura, no se modificó D1 ni se invocó Gemini"
+        : insertedArticles.length === 0
+          ? "No se ingresaron nuevos borradores hoy (cuota diaria alcanzada o sin candidatos nuevos)"
+          : "GEMINI_API_KEY no configurada en el Worker"
+    },
     editorial_ai: {
       provider: "Google Gemini",
       tier: "free_tier (Google AI Studio)",
@@ -458,7 +504,7 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
       nano_banana: false,
       model_primary: env?.GEMINI_MODEL || DEFAULT_GEMINI_MODEL,
       model_fallback: FALLBACK_GEMINI_MODEL,
-      api_key_configured: Boolean(env && (env.GEMINI_API_KEY || env.GOOGLE_API_KEY)),
+      api_key_configured: hasGeminiKey,
       queue_status: editorialQueueInfo
     },
     security: {
@@ -546,22 +592,15 @@ export default {
     ctx.waitUntil((async () => {
       try {
         const result = await runDailyScheduler(env, `cron:${event.cron}`, false);
-        console.log(`[Cron Ingesta Exitosa] Resumen:`, JSON.stringify({
-          time_peru: result.time_info.peru_time,
-          candidatos_detectados: result.ingest_metrics.candidates_detected,
-          guardados_en_d1: result.ingest_metrics.saved_in_d1,
-          articulos: result.saved_drafts.map(a => a.title)
+        console.log(`[Cron Pipeline FASE 6.6 Exitoso] Resumen:`, JSON.stringify({
+          time_peru: result.time_info?.peru_time,
+          ingesta_guardados: result.ingest_metrics?.saved_in_d1,
+          editorial_procesados: result.editorial_pipeline?.processed_by_gemini || 0,
+          editorial_fallidos: result.editorial_pipeline?.skipped_or_failed || 0,
+          articulos: (result.saved_drafts || []).map(a => a.title)
         }));
-        // FASE 6.5: Procesar redacción editorial con Gemini si la API key está configurada
-        if (env && (env.GEMINI_API_KEY || env.GOOGLE_API_KEY)) {
-          const editorialRes = await processEditorialDrafts(env, { limit: 9 });
-          console.log(`[Cron Redacción Editorial] Resumen:`, JSON.stringify({
-            procesados: editorialRes.processed_count,
-            omitidos: editorialRes.skipped_count
-          }));
-        }
       } catch (err) {
-        console.error(`[Cron Ingesta Error]:`, err);
+        console.error(`[Cron Pipeline Error]:`, err);
       }
     })());
   },
@@ -634,10 +673,12 @@ export default {
       }
 
       const force = url.searchParams.get("force") === "true" || url.searchParams.get("force") === "1";
+      const limitParam = url.searchParams.get("limit");
+      const customLimit = limitParam ? parseInt(limitParam, 10) : null;
       const sourceTag = `http_auth:${request.method}:${auth.method}${force ? ":force" : ""}`;
 
       try {
-        const result = await runDailyScheduler(env, sourceTag, false);
+        const result = await runDailyScheduler(env, sourceTag, false, customLimit);
         return new Response(JSON.stringify(result, null, 2), {
           status: 200,
           headers: {
@@ -700,8 +741,8 @@ export default {
         { path: "/", description: "Diagnóstico general seguro (dry-run, lectura segura)" },
         { path: "/status", description: "Estado, hora de Perú y fuentes configuradas" },
         { path: "/sources", description: "Vista previa en vivo del feed RPP (solo lectura)" },
-        { path: "/run", description: "Ejecutar ingesta activa y guardar borradores en D1 (PROTEGIDO con CRON_SECRET)" },
-        { path: "/rewrite", description: "Redactar versiones originales con Gemini API (PROTEGIDO con CRON_SECRET, ?limit=1)" }
+        { path: "/run", description: "Ejecutar pipeline diario: ingesta y redacción automática con Gemini en D1 (PROTEGIDO con CRON_SECRET, ?limit=N opcional)" },
+        { path: "/rewrite", description: "Redactar versiones originales con Gemini API sobre borradores existentes (PROTEGIDO con CRON_SECRET, ?limit=1)" }
       ]
     }, null, 2), {
       status: 404,
