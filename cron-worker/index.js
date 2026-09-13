@@ -315,9 +315,14 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
 
   const dailyQuotaLimit = 9;
   const isForced = typeof triggerSource === "string" && triggerSource.includes("force");
-  let remainingQuota = isForced ? dailyQuotaLimit : Math.max(0, dailyQuotaLimit - todayArticlesCount);
+  let remainingQuota;
   if (customLimit !== null && !isNaN(customLimit) && Number(customLimit) > 0) {
-    remainingQuota = Math.min(remainingQuota, Number(customLimit));
+    // Si se especificó un límite explícito (ej. ?limit=2 para prueba controlada), se respeta ese cupo
+    remainingQuota = Math.min(dailyQuotaLimit, Number(customLimit));
+  } else if (isForced) {
+    remainingQuota = dailyQuotaLimit;
+  } else {
+    remainingQuota = Math.max(0, dailyQuotaLimit - todayArticlesCount);
   }
 
   // 4. Seleccionar hasta un máximo de 9 noticias balanceadas para el día (respetando cuota restante)
