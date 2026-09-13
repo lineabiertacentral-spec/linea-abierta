@@ -71,8 +71,8 @@ El Worker cuenta con un motor de redacción periodística que toma los borradore
 4. Pulsa **Implementar / Guardar**.
 
 ### 💸 Control de Costos y Nivel Gratuito:
-- **Modelo Principal:** `gemini-2.5-flash` (Google AI Studio Free Tier: 15 RPM, 1,500 RPD).
-- **Modelo Fallback:** `gemini-2.0-flash` (Google AI Studio Free Tier: 15 RPM, 1,500 RPD).
+- **Modelo Principal:** `gemini-3.5-flash-lite` (Google AI Studio Free Tier: 15 RPM, 1,500 RPD).
+- **Modelo Fallback:** `gemini-3.1-flash-lite` (Google AI Studio Free Tier: 15 RPM, 1,500 RPD).
 - **Cero Costos:** No se usa Google Search grounding (que tiene tarifas por búsqueda), no se usa Nano Banana ni APIs externas de pago.
 - **Trazabilidad:** Cada noticia redactada conserva internamente en su código la fuente y URL de origen en un comentario HTML invisible para los lectores pero auditable en `/admin`.
 

@@ -21,20 +21,23 @@ import {
   DEFAULT_GEMINI_MODEL,
   FALLBACK_GEMINI_MODEL,
   EDITORIAL_SYSTEM_PROMPT,
-  cleanJsonBlock
+  cleanJsonBlock,
+  callGeminiApi,
+  generateEditorialArticle
 } from "../cron-worker/editorial/gemini.js";
 
 import {
   parseSourceMetadata,
   processSingleDraft,
-  processEditorialDrafts
+  processEditorialDrafts,
+  getPendingEditorialDrafts
 } from "../cron-worker/editorial/index.js";
 
 import worker from "../cron-worker/index.js";
 
 async function runGeminiEditorialTests() {
   console.log("=================================================================");
-  console.log("LINEA ABIERTA — Test de Redacción Editorial con Gemini (FASE 6.5)");
+  console.log("LINEA ABIERTA — Test Suite: FASE 6.5 (Redacción Editorial Gemini)");
   console.log("=================================================================\n");
 
   let passed = 0;
@@ -42,10 +45,10 @@ async function runGeminiEditorialTests() {
 
   function assert(condition, message) {
     if (condition) {
-      console.log(`  ✅ PASS: ${message}`);
+      console.log(`  ✓ PASS: ${message}`);
       passed++;
     } else {
-      console.error(`  ❌ FAIL: ${message}`);
+      console.error(`  ✗ FAIL: ${message}`);
       failed++;
     }
   }
@@ -54,8 +57,8 @@ async function runGeminiEditorialTests() {
   // 1. Modelos de Nivel Gratuito y Control de Costos
   // --------------------------------------------------------------------------
   console.log("--- 1. Configuración de Modelos Gratuitos (Zero Costos) ---");
-  assert(DEFAULT_GEMINI_MODEL === "gemini-2.5-flash", `Modelo principal gratuito: ${DEFAULT_GEMINI_MODEL}`);
-  assert(FALLBACK_GEMINI_MODEL === "gemini-2.0-flash", `Modelo de respaldo gratuito: ${FALLBACK_GEMINI_MODEL}`);
+  assert(DEFAULT_GEMINI_MODEL === "gemini-3.5-flash-lite", `Modelo principal gratuito: ${DEFAULT_GEMINI_MODEL}`);
+  assert(FALLBACK_GEMINI_MODEL === "gemini-3.1-flash-lite", `Modelo de respaldo gratuito: ${FALLBACK_GEMINI_MODEL}`);
 
   // Verificar que el prompt prohíba alucinaciones y plagio
   assert(EDITORIAL_SYSTEM_PROMPT.includes("REDACCIÓN 100% ORIGINAL"), "Prompt exige redacción 100% original");
@@ -259,7 +262,7 @@ async function runGeminiEditorialTests() {
   assert(processResult.processed_count === 1, `Exactamente 1 borrador procesado (Total: ${processResult.processed_count})`);
   assert(processResult.skipped_count === 0, `0 borradores omitidos por error`);
   assert(geminiCallCount === 1, `Gemini API invocada exactamente 1 vez (Total llamadas: ${geminiCallCount})`);
-  assert(capturedModelInUrl === "gemini-2.5-flash", `Modelo gratuito invocado en URL: ${capturedModelInUrl}`);
+  assert(capturedModelInUrl === "gemini-3.5-flash-lite", `Modelo gratuito invocado en URL: ${capturedModelInUrl}`);
 
   // --------------------------------------------------------------------------
   // 6. Verificación de Integridad del Borrador Modificado en D1
@@ -287,7 +290,7 @@ async function runGeminiEditorialTests() {
     "Trazabilidad de fuente original y URL preservada en encabezado HTML interno");
   assert(processedDraft.content.includes("REDACTADO_EDITORIAL:"), 
     "Marca de tiempo de redacción editorial registrada en metadatos");
-  assert(processedDraft.content.includes("MODELO: gemini-2.5-flash"), 
+  assert(processedDraft.content.includes("MODELO: gemini-3.5-flash-lite"), 
     "Modelo utilizado registrado para auditoría interna");
 
   // C. Garantías inalterables de seguridad

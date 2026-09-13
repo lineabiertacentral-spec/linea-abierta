@@ -8,11 +8,11 @@
  * 1. Utiliza exclusivamente el nivel gratuito (Google AI Studio Free Tier).
  * 2. Cero costos: NO usa Google Search grounding ni herramientas de pago.
  * 3. La API Key se obtiene estrictamente de env.GEMINI_API_KEY (secreto del Worker).
- * 4. Modelo por defecto: gemini-2.5-flash con fallback a gemini-2.0-flash.
+ * 4. Modelo por defecto: gemini-3.5-flash-lite con fallback a gemini-3.1-flash-lite.
  */
 
-export const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
-export const FALLBACK_GEMINI_MODEL = "gemini-2.0-flash";
+export const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite";
+export const FALLBACK_GEMINI_MODEL = "gemini-3.1-flash-lite";
 
 /**
  * Prompt del sistema con directrices editoriales estrictas para Linea Abierta.
@@ -59,7 +59,7 @@ export function cleanJsonBlock(text) {
  * Llama a la API de Gemini mediante HTTP POST directo (compatible con Cloudflare Workers).
  * @param {string} prompt - Contenido a redactar
  * @param {string} apiKey - Clave secreta de Google AI Studio
- * @param {string} model - Nombre del modelo (ej. 'gemini-2.5-flash')
+ * @param {string} model - Nombre del modelo (ej. 'gemini-3.5-flash-lite')
  */
 export async function callGeminiApi(prompt, apiKey, model = DEFAULT_GEMINI_MODEL) {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
@@ -145,7 +145,7 @@ export async function generateEditorialArticle(rawArticle, env) {
     `Cuerpo / contenido de la fuente: ${rawArticle.raw_content || rawArticle.content || ""}`
   ].filter(Boolean).join("\n\n");
 
-  // Intento 1: Modelo principal (ej. gemini-2.5-flash)
+  // Intento 1: Modelo principal (ej. gemini-3.5-flash-lite)
   try {
     const editorialJson = await callGeminiApi(referenceText, apiKey.trim(), preferredModel);
     return {
@@ -156,7 +156,7 @@ export async function generateEditorialArticle(rawArticle, env) {
   } catch (primaryErr) {
     console.warn(`[Gemini Editorial] Falló modelo ${preferredModel} (${primaryErr.message}). Intentando fallback a ${FALLBACK_GEMINI_MODEL}...`);
     
-    // Intento 2: Fallback (ej. gemini-2.0-flash)
+    // Intento 2: Fallback (ej. gemini-3.1-flash-lite)
     try {
       console.warn(`[EDITORIAL] Fallback al modelo de respaldo: ${FALLBACK_GEMINI_MODEL}`);
       const fallbackJson = await callGeminiApi(referenceText, apiKey.trim(), FALLBACK_GEMINI_MODEL);
