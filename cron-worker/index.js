@@ -21,7 +21,8 @@ import {
 } from "./sources/index.js";
 
 import {
-  processEditorialDrafts
+  processEditorialDrafts,
+  processSingleDraft
 } from "./editorial/index.js";
 
 import {
@@ -522,6 +523,112 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
 }
 
 /**
+ * FASE 6.6: Limpia borradores antiguos de prueba y deja exactamente 9 noticias de hoy,
+ * todas reescritas editorialmente por Gemini y listas como borradores para publicación manual.
+ */
+export async function prepareDaily9EditorialNews(env) {
+  if (!env || !env.DB) {
+    return { success: false, error: "Base de datos D1 no disponible." };
+  }
+
+  const availableCols = await getArticleTableColumns(env.DB);
+  const authorCol = (availableCols.has("author") || !availableCols.has("author_name")) ? "author" : "author_name";
+  const contentCol = (availableCols.has("body") && !availableCols.has("content")) ? "body" : "content";
+
+  // 1. Obtener todos los artículos ordenados por id DESC
+  const allRows = await env.DB.prepare(
+    `SELECT id, title, slug, status, ${authorCol} AS author, published_at, created_at FROM articles ORDER BY id DESC`
+  ).all();
+
+  const articles = Array.isArray(allRows.results) ? allRows.results : [];
+
+  // Separar los publicados (ej. noticia 1 de prueba) y los borradores
+  const publishedArticles = articles.filter(a => a.status === "published");
+  const drafts = articles.filter(a => a.status === "draft");
+
+  // Seleccionar los 9 borradores más recientes (los de mayor ID)
+  const keptDrafts = drafts.slice(0, 9);
+  const keptDraftIds = new Set(keptDrafts.map(d => d.id));
+
+  // Borradores sobrantes a eliminar (las pruebas viejas acumuladas de días anteriores)
+  const draftsToDelete = drafts.filter(d => !keptDraftIds.has(d.id));
+  const deletedIds = [];
+
+  for (const d of draftsToDelete) {
+    try {
+      await env.DB.prepare("DELETE FROM articles WHERE id = ? AND status = 'draft'").bind(d.id).run();
+      deletedIds.push(d.id);
+    } catch (delErr) {
+      console.warn(`[Clean] Error al eliminar borrador viejo ${d.id}:`, delErr?.message);
+    }
+  }
+
+  // 2. Para los 9 borradores conservados, identificar cuáles necesitan redacción con Gemini
+  // (los que tienen author 'Fuente Detectada' o no tienen REDACTADO_EDITORIAL)
+  const fullKeptDrafts = [];
+  for (const kd of keptDrafts) {
+    const fullRow = await env.DB.prepare("SELECT * FROM articles WHERE id = ?").bind(kd.id).first();
+    if (fullRow) fullKeptDrafts.push(fullRow);
+  }
+
+  const needsGemini = fullKeptDrafts.filter(d => {
+    const authVal = d.author || d.author_name || "";
+    const contVal = d.content || d.body || "";
+    return authVal.includes("Fuente Detectada") || !contVal.includes("REDACTADO_EDITORIAL");
+  });
+
+  const rewriteResults = [];
+  const hasGeminiKey = Boolean(env && (env.GEMINI_API_KEY || env.GOOGLE_API_KEY));
+
+  if (needsGemini.length > 0 && hasGeminiKey) {
+    console.log(`[PrepareDaily9] Redactando ${needsGemini.length} borradores pendientes con Gemini...`);
+    for (let i = 0; i < needsGemini.length; i++) {
+      const draft = needsGemini[i];
+      if (i > 0) {
+        // Pausa preventiva de 1000ms para respetar holgadamente el Free Tier (15 RPM)
+        await new Promise(r => setTimeout(r, 1000));
+      }
+      try {
+        const res = await processSingleDraft(draft, env);
+        rewriteResults.push(res);
+      } catch (err) {
+        console.error(`[PrepareDaily9] Error en borrador ${draft.id}:`, err?.message);
+        rewriteResults.push({ id: draft.id, success: false, error: err.message });
+      }
+    }
+  }
+
+  // 3. Consultar el estado final de los borradores en D1
+  const finalDraftsRows = await env.DB.prepare(
+    `SELECT id, title, slug, ${authorCol} AS author, status, published_at, created_at, updated_at FROM articles WHERE status = 'draft' ORDER BY id DESC`
+  ).all();
+
+  const finalDrafts = Array.isArray(finalDraftsRows.results) ? finalDraftsRows.results : [];
+
+  return {
+    success: true,
+    task: "prepare_daily_9_news",
+    phase: "FASE 6.6 — Preparación Limpia de las 9 Noticias del Día",
+    summary: {
+      total_borradores_anteriores: drafts.length,
+      borradores_antiguos_eliminados: deletedIds.length,
+      borradores_conservados: keptDrafts.length,
+      redactados_con_gemini_ahora: rewriteResults.filter(r => r.success).length,
+      total_borradores_listos: finalDrafts.length,
+      todos_son_draft: finalDrafts.every(d => d.status === "draft"),
+      ninguno_publicado: finalDrafts.every(d => d.published_at === null)
+    },
+    noticias_listas_en_admin: finalDrafts.map(d => ({
+      id: d.id,
+      title: d.title,
+      author: d.author,
+      status: d.status,
+      published_at: d.published_at
+    }))
+  };
+}
+
+/**
  * Comparación de cadenas en tiempo constante (timing-safe) para mitigar ataques de temporización.
  */
 export function timingSafeEqualStr(a, b) {
@@ -682,6 +789,26 @@ export default {
       const customLimit = limitParam ? parseInt(limitParam, 10) : null;
       const sourceTag = `http_auth:${request.method}:${auth.method}${force ? ":force" : ""}`;
 
+      // Si se solicita la preparación limpia de las 9 noticias del día (?prepare=9 o ?prepare=true)
+      if (url.searchParams.get("prepare") === "9" || url.searchParams.get("prepare") === "true") {
+        try {
+          const result = await prepareDaily9EditorialNews(env);
+          return new Response(JSON.stringify(result, null, 2), {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json; charset=utf-8",
+              "Access-Control-Allow-Origin": "*",
+              "Cache-Control": "no-store"
+            }
+          });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), {
+            status: 500,
+            headers: { "Content-Type": "application/json; charset=utf-8" }
+          });
+        }
+      }
+
       try {
         const result = await runDailyScheduler(env, sourceTag, false, customLimit);
         return new Response(JSON.stringify(result, null, 2), {
@@ -740,13 +867,51 @@ export default {
       }
     }
 
+    // 5. Preparación limpia y definitiva de las 9 noticias del día (PROTEGIDO CON CLAVE SECRETA)
+    if (url.pathname === "/prepare-daily-9" || url.pathname === "/prepare-9") {
+      const auth = checkManualExecutionAuth(request, env);
+
+      if (!auth.authorized) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: "Acceso no autorizado al endpoint de preparación diaria (/prepare-daily-9).",
+          reason: auth.reason,
+          help: "Envía la clave secreta en la cabecera Authorization (Bearer) o X-Cron-Key."
+        }, null, 2), {
+          status: 401,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "WWW-Authenticate": "Bearer realm='linea-abierta-cron'"
+          }
+        });
+      }
+
+      try {
+        const result = await prepareDaily9EditorialNews(env);
+        return new Response(JSON.stringify(result, null, 2), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-store"
+          }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json; charset=utf-8" }
+        });
+      }
+    }
+
     return new Response(JSON.stringify({
       error: "Ruta no encontrada.",
       endpoints_disponibles: [
         { path: "/", description: "Diagnóstico general seguro (dry-run, lectura segura)" },
         { path: "/status", description: "Estado, hora de Perú y fuentes configuradas" },
         { path: "/sources", description: "Vista previa en vivo del feed RPP (solo lectura)" },
-        { path: "/run", description: "Ejecutar pipeline diario: ingesta y redacción automática con Gemini en D1 (PROTEGIDO con CRON_SECRET, ?limit=N opcional)" },
+        { path: "/run", description: "Ejecutar pipeline diario: ingesta y redacción automática con Gemini en D1 (PROTEGIDO con CRON_SECRET, ?limit=N o ?prepare=9)" },
+        { path: "/prepare-daily-9", description: "Limpiar pruebas viejas y dejar exactamente 9 noticias de hoy redactadas con Gemini (PROTEGIDO con CRON_SECRET)" },
         { path: "/rewrite", description: "Redactar versiones originales con Gemini API sobre borradores existentes (PROTEGIDO con CRON_SECRET, ?limit=1)" }
       ]
     }, null, 2), {
