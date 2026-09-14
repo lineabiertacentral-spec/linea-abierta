@@ -1023,7 +1023,8 @@ export default {
       }
 
       if (body.published_at !== undefined || body.publish_date !== undefined) {
-        const pub = body.published_at || body.publish_date;
+        const rawPub = body.published_at !== undefined ? body.published_at : body.publish_date;
+        const pub = (rawPub && typeof rawPub === 'string' && rawPub.trim().length > 0) ? rawPub.trim() : null;
         if (availableCols.has('published_at')) updateData['published_at'] = pub;
         else if (availableCols.has('publish_date')) updateData['publish_date'] = pub;
       }
@@ -1034,7 +1035,7 @@ export default {
 
       const updateKeys = Object.keys(updateData);
       const setClause = updateKeys.map(k => `${k} = ?`).join(', ');
-      const values = [...updateKeys.map(k => updateData[k]), testId];
+      const values = [...updateKeys.map(k => updateData[k] === undefined ? null : updateData[k]), Number(testId)];
 
       try {
         const result = await env.DB.prepare(`UPDATE articles SET ${setClause} WHERE id = ?`).bind(...values).run();
