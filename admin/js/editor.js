@@ -202,7 +202,9 @@ async function saveArticle() {
       alert(isEdit ? 'Noticia actualizada correctamente.' : 'Noticia creada con éxito.');
       window.location.href = '/admin/index.html';
     } else {
-      alert(data.error || 'Error al guardar la noticia.');
+      const errorMsg = data.error || 'Error al guardar la noticia.';
+      const detailsMsg = data.details ? `\n\nDetalle: ${data.details}` : '';
+      alert(`${errorMsg}${detailsMsg}`);
     }
   } catch (err) {
     console.error('Error al guardar artículo:', err);

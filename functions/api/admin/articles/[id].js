@@ -112,7 +112,8 @@ export async function onRequestPut(context) {
   }
 
   if (body.published_at !== undefined || body.publish_date !== undefined) {
-    const pub = body.published_at || body.publish_date;
+    const rawPub = body.published_at !== undefined ? body.published_at : body.publish_date;
+    const pub = (rawPub && typeof rawPub === 'string' && rawPub.trim().length > 0) ? rawPub.trim() : null;
     if (availableCols.has('published_at')) updateData['published_at'] = pub;
     else if (availableCols.has('publish_date')) updateData['publish_date'] = pub;
   }
@@ -121,7 +122,7 @@ export async function onRequestPut(context) {
     updateData['updated_at'] = new Date().toISOString();
   }
 
-  const updateKeys = Object.keys(updateData);
+  const updateKeys = Object.keys(updateData).filter(k => updateData[k] !== undefined);
   if (updateKeys.length === 0) {
     return new Response(JSON.stringify({ error: 'No se enviaron campos válidos para actualizar.' }), {
       status: 400,
@@ -130,7 +131,7 @@ export async function onRequestPut(context) {
   }
 
   const setClause = updateKeys.map(k => `${k} = ?`).join(', ');
-  const values = [...updateKeys.map(k => updateData[k]), id];
+  const values = [...updateKeys.map(k => updateData[k] === undefined ? null : updateData[k]), Number(id) || id];
 
   try {
     const result = await db.prepare(`UPDATE articles SET ${setClause} WHERE id = ?`).bind(...values).run();
