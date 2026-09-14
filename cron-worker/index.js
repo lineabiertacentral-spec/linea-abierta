@@ -914,6 +914,45 @@ export default {
       }
     }
 
+    // 6. Inspección de borrador en D1 para verificación editorial (PROTEGIDO CON CLAVE SECRETA)
+    if (url.pathname === "/draft" || url.pathname === "/article-draft") {
+      const auth = checkManualExecutionAuth(request, env);
+
+      if (!auth.authorized) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: "Acceso no autorizado al endpoint de inspección (/draft).",
+          reason: auth.reason
+        }, null, 2), {
+          status: 401,
+          headers: { "Content-Type": "application/json; charset=utf-8" }
+        });
+      }
+
+      const idParam = url.searchParams.get("id");
+      try {
+        let draftRow = null;
+        if (idParam) {
+          draftRow = await env.DB.prepare("SELECT * FROM articles WHERE id = ?").bind(idParam).first();
+        } else {
+          draftRow = await env.DB.prepare("SELECT * FROM articles WHERE status = 'draft' ORDER BY id DESC").first();
+        }
+        return new Response(JSON.stringify({ success: true, article: draftRow }, null, 2), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-store"
+          }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json; charset=utf-8" }
+        });
+      }
+    }
+
     return new Response(JSON.stringify({
       error: "Ruta no encontrada.",
       endpoints_disponibles: [
