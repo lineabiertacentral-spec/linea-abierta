@@ -960,6 +960,107 @@ export default {
       }
     }
 
+    // 7. Simulación y diagnóstico exacto del UPDATE de /admin en D1
+    if (url.pathname === "/test-put-article") {
+      const auth = checkManualExecutionAuth(request, env);
+      if (!auth.authorized) {
+        return new Response(JSON.stringify({ error: "No autorizado" }), { status: 401 });
+      }
+      const testId = url.searchParams.get("id") || "30";
+      const testImg = url.searchParams.get("image") || "assets/images/brics-oriente-medio.png";
+
+      const availableCols = await getArticleTableColumns(env.DB);
+      const articleRow = await env.DB.prepare("SELECT * FROM articles WHERE id = ?").bind(testId).first();
+
+      const body = {
+        title: articleRow.title,
+        slug: articleRow.slug,
+        category_id: articleRow.category_id,
+        summary: articleRow.excerpt || articleRow.summary,
+        content: articleRow.content,
+        image_url: testImg,
+        author_name: articleRow.author || articleRow.author_name,
+        status: "draft",
+        published_at: null
+      };
+
+      const updateData = {};
+      const mapIfAvailable = (colName, value) => {
+        if (availableCols.has(colName) && value !== undefined) {
+          updateData[colName] = value;
+        }
+      };
+
+      if (body.title !== undefined) mapIfAvailable('title', body.title.trim());
+      if (body.slug !== undefined) mapIfAvailable('slug', body.slug.trim());
+      if (body.category_id !== undefined) mapIfAvailable('category_id', body.category_id ? Number(body.category_id) : null);
+      if (body.status !== undefined) mapIfAvailable('status', body.status);
+
+      const content = body.content !== undefined ? body.content.trim() : undefined;
+      if (content !== undefined) {
+        if (availableCols.has('content')) updateData['content'] = content;
+        else if (availableCols.has('body')) updateData['body'] = content;
+      }
+
+      const summary = (body.summary !== undefined ? body.summary : body.lead)?.trim();
+      if (summary !== undefined) {
+        if (availableCols.has('summary')) updateData['summary'] = summary;
+        else if (availableCols.has('lead')) updateData['lead'] = summary;
+        else if (availableCols.has('excerpt')) updateData['excerpt'] = summary;
+      }
+
+      if (body.image_url !== undefined || body.cover_image !== undefined) {
+        const img = (body.image_url || body.cover_image || '').trim();
+        if (availableCols.has('image_url')) updateData['image_url'] = img;
+        else if (availableCols.has('cover_image')) updateData['cover_image'] = img;
+        else if (availableCols.has('image')) updateData['image'] = img;
+      }
+
+      if (body.author_name !== undefined || body.author !== undefined) {
+        const auth = (body.author_name || body.author || '').trim();
+        if (availableCols.has('author_name')) updateData['author_name'] = auth;
+        else if (availableCols.has('author')) updateData['author'] = auth;
+      }
+
+      if (body.published_at !== undefined || body.publish_date !== undefined) {
+        const pub = body.published_at || body.publish_date;
+        if (availableCols.has('published_at')) updateData['published_at'] = pub;
+        else if (availableCols.has('publish_date')) updateData['publish_date'] = pub;
+      }
+
+      if (availableCols.has('updated_at')) {
+        updateData['updated_at'] = new Date().toISOString();
+      }
+
+      const updateKeys = Object.keys(updateData);
+      const setClause = updateKeys.map(k => `${k} = ?`).join(', ');
+      const values = [...updateKeys.map(k => updateData[k]), testId];
+
+      try {
+        const result = await env.DB.prepare(`UPDATE articles SET ${setClause} WHERE id = ?`).bind(...values).run();
+        return new Response(JSON.stringify({
+          success: true,
+          setClause,
+          values,
+          result
+        }, null, 2), {
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({
+          success: false,
+          setClause,
+          values,
+          error: err.message,
+          stack: err.stack
+        }, null, 2), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
     return new Response(JSON.stringify({
       error: "Ruta no encontrada.",
       endpoints_disponibles: [
