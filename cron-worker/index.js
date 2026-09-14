@@ -937,7 +937,14 @@ export default {
         } else {
           draftRow = await env.DB.prepare("SELECT * FROM articles WHERE status = 'draft' ORDER BY id DESC").first();
         }
-        return new Response(JSON.stringify({ success: true, article: draftRow }, null, 2), {
+        const schema = await env.DB.prepare("SELECT sql, type, name FROM sqlite_master WHERE tbl_name = 'articles'").all();
+        const pragma = await env.DB.prepare("PRAGMA table_info(articles)").all();
+        return new Response(JSON.stringify({
+          success: true,
+          article: draftRow,
+          schema: schema.results,
+          columns: pragma.results
+        }, null, 2), {
           status: 200,
           headers: {
             "Content-Type": "application/json; charset=utf-8",
