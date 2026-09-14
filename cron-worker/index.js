@@ -526,7 +526,7 @@ export async function runDailyScheduler(env, triggerSource = "scheduled", dryRun
  * FASE 6.6: Limpia borradores antiguos de prueba y deja exactamente 9 noticias de hoy,
  * todas reescritas editorialmente por Gemini y listas como borradores para publicación manual.
  */
-export async function prepareDaily9EditorialNews(env) {
+export async function prepareDaily9EditorialNews(env, options = {}) {
   if (!env || !env.DB) {
     return { success: false, error: "Base de datos D1 no disponible." };
   }
@@ -564,24 +564,27 @@ export async function prepareDaily9EditorialNews(env) {
   }
 
   // 2. Para los 9 borradores conservados, identificar cuáles necesitan redacción con Gemini
-  // (los que tienen author 'Fuente Detectada' o no tienen REDACTADO_EDITORIAL)
   const fullKeptDrafts = [];
   for (const kd of keptDrafts) {
     const fullRow = await env.DB.prepare("SELECT * FROM articles WHERE id = ?").bind(kd.id).first();
     if (fullRow) fullKeptDrafts.push(fullRow);
   }
 
-  const needsGemini = fullKeptDrafts.filter(d => {
-    const authVal = d.author || d.author_name || "";
-    const contVal = d.content || d.body || "";
-    return authVal.includes("Fuente Detectada") || !contVal.includes("REDACTADO_EDITORIAL");
-  });
+  // Por defecto en prepareDaily9 se procesan todos los 9 borradores para garantizar titulares 100% nuevos
+  const forceRewrite = options && options.force !== false;
+  const needsGemini = forceRewrite
+    ? fullKeptDrafts
+    : fullKeptDrafts.filter(d => {
+        const authVal = d.author || d.author_name || "";
+        const contVal = d.content || d.body || "";
+        return authVal.includes("Fuente Detectada") || !contVal.includes("REDACTADO_EDITORIAL");
+      });
 
   const rewriteResults = [];
   const hasGeminiKey = Boolean(env && (env.GEMINI_API_KEY || env.GOOGLE_API_KEY));
 
   if (needsGemini.length > 0 && hasGeminiKey) {
-    console.log(`[PrepareDaily9] Redactando ${needsGemini.length} borradores pendientes con Gemini...`);
+    console.log(`[PrepareDaily9] Redactando ${needsGemini.length} borradores con Gemini (forceRewrite: ${forceRewrite})...`);
     for (let i = 0; i < needsGemini.length; i++) {
       const draft = needsGemini[i];
       if (i > 0) {
@@ -590,7 +593,14 @@ export async function prepareDaily9EditorialNews(env) {
       }
       try {
         const res = await processSingleDraft(draft, env);
-        rewriteResults.push(res);
+        rewriteResults.push({
+          id: draft.id,
+          success: res.success,
+          previous_title: draft.title,
+          new_title: res.new_title || res.after?.title,
+          model_used: res.model_used,
+          error: res.reason || res.error
+        });
       } catch (err) {
         console.error(`[PrepareDaily9] Error en borrador ${draft.id}:`, err?.message);
         rewriteResults.push({ id: draft.id, success: false, error: err.message });
@@ -792,7 +802,7 @@ export default {
       // Si se solicita la preparación limpia de las 9 noticias del día (?prepare=9 o ?prepare=true)
       if (url.searchParams.get("prepare") === "9" || url.searchParams.get("prepare") === "true") {
         try {
-          const result = await prepareDaily9EditorialNews(env);
+          const result = await prepareDaily9EditorialNews(env, { force: url.searchParams.get("force") !== "false" });
           return new Response(JSON.stringify(result, null, 2), {
             status: 200,
             headers: {
@@ -887,7 +897,7 @@ export default {
       }
 
       try {
-        const result = await prepareDaily9EditorialNews(env);
+        const result = await prepareDaily9EditorialNews(env, { force: url.searchParams.get("force") !== "false" });
         return new Response(JSON.stringify(result, null, 2), {
           status: 200,
           headers: {
